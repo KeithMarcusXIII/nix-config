@@ -34,7 +34,7 @@
             {
               home-manager.users.keith = {
                 imports = [ self.homeManagerModules.default ];
-                home.stateVersion = "24.11";
+                home.stateVersion = "25.05";
               };
             }
           ];
