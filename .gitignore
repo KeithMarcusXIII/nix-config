@@ -6,3 +6,7 @@ result-*
 .direnv
 
 .DS_Store
+
+_bmad*
+.claude
+.agents
