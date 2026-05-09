@@ -8,4 +8,9 @@ perSystem:
     pkgs.tree
     pkgs.colima
   ];
+
+  homebrew = {
+    enable = true;
+    casks = [ "zen-browser" ];
+  };
 }

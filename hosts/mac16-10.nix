@@ -1,10 +1,9 @@
 { config, pkgs, lib, ... }:
 {
   system.stateVersion = 5;
+  system.primaryUser = "keith";
 
   users.users.keith = {
-    isNormalUser = true;
-    createHome = true;
     home = "/Users/keith";
   };
 }
