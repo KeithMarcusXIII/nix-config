@@ -7,7 +7,6 @@ perSystem:
     vscodium
 
     # Requested GUI applications
-    android-studio
     moonlight-qt
     wechat-uos
 

@@ -34,6 +34,7 @@ perSystem:
     enable = true;
     casks = [
       # macOS GUI apps (not in nixpkgs)
+      "android-studio"
       "betterdisplay"
       "mac-mouse-fix"
       "raycast"
