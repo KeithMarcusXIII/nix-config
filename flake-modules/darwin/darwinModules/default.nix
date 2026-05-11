@@ -1,16 +1,37 @@
 perSystem:
 { lib, config, pkgs, ... }:
 {
-  environment.systemPackages = [
-    pkgs.git
-    pkgs.ripgrep
-    pkgs.wget
-    pkgs.tree
-    pkgs.colima
+  environment.systemPackages = with pkgs; [
+    # Core CLI utilities
+    git
+    ripgrep
+    wget
+    tree
+    jq
+    fzf
+
+    # Container runtime (Colima + Docker CLI)
+    colima
+    docker
+    docker-compose
+    docker-buildx
+
+    # Services & system-level tools
+    sunshine
+    qemu
+    ollama
   ];
 
   homebrew = {
     enable = true;
-    casks = [ "zen-browser" ];
+    casks = [
+      # macOS GUI apps (not in nixpkgs)
+      "betterdisplay"
+      "mac-mouse-fix"
+      "raycast"
+      "rectangle-pro"
+      "stats"
+      "zen-browser"
+    ];
   };
 }

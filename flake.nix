@@ -10,6 +10,8 @@
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
+    bluebuild-cli.url = "github:blue-build/cli";
+    bluebuild-cli.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = inputs@{ flake-parts, nix-darwin, home-manager, ... }:
