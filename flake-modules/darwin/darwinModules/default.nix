@@ -1,6 +1,11 @@
 perSystem:
 { lib, config, pkgs, ... }:
 {
+  nixpkgs.config = {
+    android_sdk.accept_license = true;
+    allowUnfree = true;
+  };
+
   environment.systemPackages = with pkgs; [
     # Core CLI utilities
     git
