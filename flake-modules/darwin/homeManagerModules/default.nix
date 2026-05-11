@@ -8,7 +8,7 @@ perSystem:
 
     # Requested GUI applications
     moonlight-qt
-    wechat-uos
+    wechat
 
     # Notable CLI tools (migrated from brew leaves + recommended dev tools)
     apktool          # Android APK reverse engineering
