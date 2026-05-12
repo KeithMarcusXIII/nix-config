@@ -55,6 +55,9 @@ perSystem:
 
   homebrew = {
     enable = true;
+    taps = [
+      "jundot/omlx"
+    ];
     casks = [
       # macOS GUI apps (not in nixpkgs)
       "android-studio"
@@ -64,6 +67,7 @@ perSystem:
       "rectangle-pro"
       "stats"
       "zen"
+      "omlx"
     ];
   };
 }
