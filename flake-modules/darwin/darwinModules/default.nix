@@ -81,7 +81,7 @@ perSystem:
       # "android-studio"
       # "betterdisplay"
       # "mac-mouse-fix"
-      "raycast"
+      # "raycast"
       # "rectangle-pro"
       # "stats"
       # "zen"
