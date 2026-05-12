@@ -59,7 +59,7 @@ perSystem:
       extraFlags = [
         "--verbose"
       ];
-      cleanup = "zap";
+      # cleanup = "zap";
       extraEnv = {
         HOMEBREW_CASK_OPTS = "--appdir=/Volumes/Macintosh\\ Dock/Applications";
       };
@@ -81,7 +81,7 @@ perSystem:
       # "android-studio"
       # "betterdisplay"
       # "mac-mouse-fix"
-      # "raycast"
+      "raycast"
       # "rectangle-pro"
       # "stats"
       # "zen"
