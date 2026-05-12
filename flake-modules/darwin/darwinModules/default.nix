@@ -62,6 +62,9 @@ perSystem:
         force_auto_update = true;
       }
     ];
+    brews = [
+      "omlx"
+    ];
     casks = [
       # macOS GUI apps (not in nixpkgs)
       "android-studio"
@@ -71,7 +74,6 @@ perSystem:
       "rectangle-pro"
       "stats"
       "zen"
-      "omlx"
     ];
   };
 }
