@@ -56,7 +56,11 @@ perSystem:
   homebrew = {
     enable = true;
     taps = [
-      "jundot/omlx"
+      {
+        name = "jundot/omlx";
+        clone_target = "https://github.com/jundot/omlx";
+        force_auto_update = true;
+      }
     ];
     casks = [
       # macOS GUI apps (not in nixpkgs)
