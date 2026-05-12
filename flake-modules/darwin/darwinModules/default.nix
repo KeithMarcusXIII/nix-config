@@ -56,6 +56,9 @@ perSystem:
   homebrew = {
     enable = true;
     onActivation.cleanup = "zap";
+    onActivation.extraEnv = {
+      HOMEBREW_CASK_OPTS = "--appdir=/Volumes/Macintosh Dock/Applications";
+    };
     taps = [
       {
         name = "jundot/omlx";
@@ -64,20 +67,19 @@ perSystem:
       }
     ];
     brews = [
-      # {
-      #   name = "omlx";
-      #   start_service = true;
-      # }
+      {
+        name = "omlx";
+        start_service = true;
+      }
     ];
     casks = [
-      # macOS GUI apps (not in nixpkgs)
-      # "android-studio"
-      # "betterdisplay"
-      # "mac-mouse-fix"
-      # "raycast"
-      # "rectangle-pro"
-      # "stats"
-      # "zen"
+      "android-studio"
+      "betterdisplay"
+      "mac-mouse-fix"
+      "raycast"
+      "rectangle-pro"
+      "stats"
+      "zen"
     ];
   };
 }
