@@ -32,7 +32,7 @@ perSystem:
     dock.autohide = true;
     dock.tilesize = 32;
     dock.persistent-apps = [
-      { app = "/System/Applications/Launchpad.app"; }
+      { app = "/System/Applications/Apps.app"; }
       # { app = "/System/Volumes/Preboot/Cryptexes/App/System/Applications/Safari.app"; }
       { app = "/Applications/Zen.app"; }
       { app = "/System/Applications/Messages.app"; }
