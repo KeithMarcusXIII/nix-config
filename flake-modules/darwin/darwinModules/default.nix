@@ -63,7 +63,10 @@ perSystem:
       }
     ];
     brews = [
-      "omlx"
+      {
+        name = "omlx";
+        start_service = true;
+      }
     ];
     casks = [
       # macOS GUI apps (not in nixpkgs)
