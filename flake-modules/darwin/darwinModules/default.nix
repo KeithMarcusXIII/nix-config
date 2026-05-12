@@ -61,7 +61,7 @@ perSystem:
       ];
       cleanup = "zap";
       extraEnv = {
-        HOMEBREW_CASK_OPTS = "--appdir=/Volumes/Macintosh Dock/Applications";
+        HOMEBREW_CASK_OPTS = "--appdir=/Volumes/Macintosh\\ Dock/Applications";
       };
     };
     taps = [
