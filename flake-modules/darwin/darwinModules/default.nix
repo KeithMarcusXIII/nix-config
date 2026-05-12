@@ -59,7 +59,7 @@ perSystem:
       extraFlags = [
         "--verbose"
       ];
-      # cleanup = "zap";
+      cleanup = "zap";
       extraEnv = {
         HOMEBREW_CASK_OPTS = "--appdir=/Volumes/Macintosh\\ Dock/Applications";
       };
@@ -72,19 +72,19 @@ perSystem:
       }
     ];
     brews = [
-      # {
-      #   name = "omlx";
-      #   start_service = true;
-      # }
+      {
+        name = "omlx";
+        start_service = true;
+      }
     ];
     casks = [
-      # "android-studio"
-      # "betterdisplay"
-      # "mac-mouse-fix"
+      "android-studio"
+      "betterdisplay"
+      "mac-mouse-fix"
       "raycast"
-      # "rectangle-pro"
-      # "stats"
-      # "zen"
+      "rectangle-pro"
+      "stats"
+      "zen"
     ];
   };
 }
