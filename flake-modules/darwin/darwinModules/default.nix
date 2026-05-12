@@ -31,9 +31,9 @@ perSystem:
   system.defaults = {
     dock.autohide = true;
     dock.tilesize = 32;
-    dock.persistent-apps = [
-      { app = "/Applications/Zen.app"; }
-    ];
+    # dock.persistent-apps = [
+    #   { app = "/Applications/Zen.app"; }
+    # ];
     finder.ShowPathbar = true;
     finder.ShowStatusBar = true;
   };
