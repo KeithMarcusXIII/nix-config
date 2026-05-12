@@ -13,7 +13,7 @@
   power.restartAfterPowerFailure = true;
   power.sleep = {
     # Amount of idle time (in minutes) until the computer sleeps.
-    computer = 0;
+    computer = "never";
     # Amount of idle time (in minutes) until displays sleep.
     display = 10;
   };
