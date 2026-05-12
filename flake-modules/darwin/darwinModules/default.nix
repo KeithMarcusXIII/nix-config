@@ -56,7 +56,9 @@ perSystem:
   homebrew = {
     enable = true;
     onActivation = {
-      extraFlags = "--verbose";
+      extraFlags = [
+        "--verbose"
+      ];
       cleanup = "zap";
       extraEnv = {
         HOMEBREW_CASK_OPTS = "--appdir=/Volumes/Macintosh Dock/Applications";
