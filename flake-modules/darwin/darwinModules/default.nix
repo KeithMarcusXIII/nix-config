@@ -26,9 +26,17 @@ perSystem:
 
     # Services & system-level tools
     sunshine
-    qemu
-    ollama
   ];
+
+  system.defaults = {
+    dock.autohide = true;
+    dock.tilesize = 32;
+    dock.persistent-apps = [
+      { app = "/Applications/Zen.app"; }
+    ];
+    finder.ShowPathbar = true;
+    finder.ShowStatusBar = true;
+  };
 
   homebrew = {
     enable = true;
@@ -40,7 +48,7 @@ perSystem:
       "raycast"
       "rectangle-pro"
       "stats"
-      "zen-browser"
+      "zen"
     ];
   };
 }
