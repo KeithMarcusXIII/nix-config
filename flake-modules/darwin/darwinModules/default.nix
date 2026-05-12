@@ -55,9 +55,12 @@ perSystem:
 
   homebrew = {
     enable = true;
-    onActivation.cleanup = "zap";
-    onActivation.extraEnv = {
-      HOMEBREW_CASK_OPTS = "--appdir=/Volumes/Macintosh Dock/Applications";
+    onActivation = {
+      extraFlags = "--verbose";
+      cleanup = "zap";
+      extraEnv = {
+        HOMEBREW_CASK_OPTS = "--appdir=/Volumes/Macintosh Dock/Applications";
+      };
     };
     taps = [
       {
@@ -67,19 +70,19 @@ perSystem:
       }
     ];
     brews = [
-      {
-        name = "omlx";
-        start_service = true;
-      }
+      # {
+      #   name = "omlx";
+      #   start_service = true;
+      # }
     ];
     casks = [
-      "android-studio"
-      "betterdisplay"
-      "mac-mouse-fix"
+      # "android-studio"
+      # "betterdisplay"
+      # "mac-mouse-fix"
       "raycast"
-      "rectangle-pro"
-      "stats"
-      "zen"
+      # "rectangle-pro"
+      # "stats"
+      # "zen"
     ];
   };
 }
