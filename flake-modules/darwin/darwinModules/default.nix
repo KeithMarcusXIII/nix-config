@@ -52,9 +52,11 @@ perSystem:
     finder.ShowPathbar = true;
     finder.ShowStatusBar = true;
     CustomUserPreferences = {
-      DesktopViewSettings = {
-        IconViewSettings = {
-          iconSize = 48;
+      "com.apple.finder" = {
+        DesktopViewSettings = {
+          IconViewSettings = {
+            iconSize = 48;
+          };
         };
       };
     };
