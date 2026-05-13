@@ -4,7 +4,7 @@ perSystem:
   home.packages = with pkgs; [
     # Already present
     iina
-    vscodium
+    # vscodium
 
     # Requested GUI applications
     moonlight-qt

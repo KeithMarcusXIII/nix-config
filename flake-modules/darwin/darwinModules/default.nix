@@ -51,15 +51,6 @@ perSystem:
     ];
     finder.ShowPathbar = true;
     finder.ShowStatusBar = true;
-    CustomUserPreferences = {
-      "com.apple.finder" = {
-        "DesktopViewSettings" = {
-          "IconViewSettings" = {
-            "iconSize" = 48;
-          };
-        };
-      };
-    };
   };
 
   homebrew = {
