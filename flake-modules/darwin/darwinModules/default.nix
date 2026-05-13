@@ -34,7 +34,7 @@ perSystem:
     dock.persistent-apps = [
       { app = "/System/Applications/Apps.app"; }
       # { app = "/System/Volumes/Preboot/Cryptexes/App/System/Applications/Safari.app"; }
-      { app = "/Volumes/Macintosh\\ Dock/Applications/Zen.app"; }
+      { app = "/Volumes/Macintosh Dock/Applications/Zen.app"; }
       { app = "/System/Applications/Messages.app"; }
       { app = "/System/Applications/Mail.app"; }
       { app = "/System/Applications/Maps.app"; }
@@ -59,7 +59,7 @@ perSystem:
       extraFlags = [
         "--verbose"
       ];
-      cleanup = "zap";
+      cleanup = "uninstall";
       extraEnv = {
         HOMEBREW_CASK_OPTS = "--appdir=/Volumes/Macintosh\\ Dock/Applications";
       };
