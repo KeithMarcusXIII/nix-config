@@ -2,11 +2,8 @@ perSystem:
 { lib, config, pkgs, ... }:
 {
   home.packages = with pkgs; [
-    # Already present
     iina
     # vscodium
-
-    # Requested GUI applications
     moonlight-qt
     wechat
 

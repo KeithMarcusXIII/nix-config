@@ -85,6 +85,7 @@ perSystem:
       "rectangle-pro"
       "stats"
       "zen"
+      "vscodium"
     ];
   };
 }
