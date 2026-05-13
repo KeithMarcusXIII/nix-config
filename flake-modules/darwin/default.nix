@@ -13,8 +13,4 @@ localFlake:
   flake.darwinModules.default = localFlake.moduleWithSystem (
     perSystem@{ config }: localFlake.importApply ./darwinModules perSystem
   );
-
-  flake.homeManagerModules.default = localFlake.moduleWithSystem (
-    perSystem@{ config }: localFlake.importApply ./homeManagerModules perSystem
-  );
 }

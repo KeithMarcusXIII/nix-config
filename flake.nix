@@ -19,16 +19,37 @@
       { self, withSystem, moduleWithSystem, flake-parts-lib, ... }:
       let
         inherit (flake-parts-lib) importApply;
-        darwin-flake-mod = importApply ./flake-modules/darwin { inherit withSystem moduleWithSystem importApply; };
+
+        darwin-mod      = importApply ./flake-modules/darwin        { inherit withSystem moduleWithSystem importApply; };
+        cli-tools-mod   = importApply ./flake-modules/cli-tools     { inherit withSystem moduleWithSystem importApply; };
+        dev-sdks-mod    = importApply ./flake-modules/dev-sdks      { inherit withSystem moduleWithSystem importApply; };
+        desktop-apps-mod = importApply ./flake-modules/desktop-apps { inherit withSystem moduleWithSystem importApply; };
       in
       {
-        imports = [ darwin-flake-mod ];
+        imports = [
+          ./flake-modules/mkHomeManagerOutputsMerge.nix
+          darwin-mod
+          cli-tools-mod
+          dev-sdks-mod
+          desktop-apps-mod
+        ];
+
         systems = [
           "x86_64-linux"
           "aarch64-linux"
           "aarch64-darwin"
           "x86_64-darwin"
         ];
+
+        perSystem = { pkgs, ... }: {
+          devShells.default = pkgs.mkShell {
+            packages = with pkgs; [
+              nil           # Nix language server
+              alejandra     # Nix formatter
+            ];
+          };
+        };
+
         flake.darwinConfigurations.mac16-10 = nix-darwin.lib.darwinSystem {
           system = "aarch64-darwin";
           modules = [
@@ -37,7 +58,11 @@
             home-manager.darwinModules.home-manager
             {
               home-manager.users.keith = {
-                imports = [ self.homeManagerModules.default ];
+                imports = [
+                  self.homeManagerModules.cli-tools
+                  self.homeManagerModules.dev-sdks
+                  self.homeManagerModules.desktop-apps
+                ];
                 home.stateVersion = "25.05";
               };
             }
