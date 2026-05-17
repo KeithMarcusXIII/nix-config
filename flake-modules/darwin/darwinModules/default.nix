@@ -1,5 +1,5 @@
 perSystem:
-{ lib, config, pkgs, ... }:
+{ lib, config, pkgs, pkgs-unstable, ... }:
 {
   nixpkgs.config = {
     android_sdk.accept_license = true;
@@ -37,14 +37,11 @@ perSystem:
     jq
     fzf
 
-    # Container runtime (Colima + Docker CLI)
-    colima
+    # Container runtime (Colima from nixpkgs-unstable — stable nixpkgs has EOL lima)
+    pkgs-unstable.colima
     docker
     docker-compose
     docker-buildx
-
-    # Services & system-level tools
-    sunshine
   ];
 
   system.defaults = {
@@ -79,14 +76,17 @@ perSystem:
         "--verbose"
       ];
       cleanup = "uninstall";
-      extraEnv = {
-        HOMEBREW_CASK_OPTS = "--appdir=/Volumes/Macintosh\\ Dock/Applications";
-      };
     };
+    caskArgs.appdir = "/Volumes/Macintosh Dock/Applications";
     taps = [
       {
         name = "jundot/omlx";
         clone_target = "https://github.com/jundot/omlx";
+        force_auto_update = true;
+      }
+      {
+        name = "lizardbyte/homebrew";
+        clone_target = "https://github.com/LizardByte/homebrew-homebrew";
         force_auto_update = true;
       }
     ];
@@ -106,6 +106,7 @@ perSystem:
       "stats"
       "zen"
       "vscodium"
+      "sunshine"
     ];
   };
 }
