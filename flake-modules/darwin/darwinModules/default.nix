@@ -9,6 +9,20 @@ perSystem:
     allowUnfree = true;
   };
 
+  nix = {
+    settings = {
+      # Multi-user daemon mode — requires build-users-group to delegate builds
+      build-users-group = "nixbld";
+      trusted-users = [ "root" "keith" ];
+      allowed-users = [ "*" ];
+      experimental-features = [ "nix-command" "flakes" ];
+      auto-optimise-store = false;
+      sandbox = false;
+      substituters = [ "https://cache.nixos.org/" ];
+      trusted-public-keys = [ "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" ];
+    };
+  };
+
   environment.systemPackages = with pkgs; [
     # Core CLI utilities
     git
@@ -26,6 +40,8 @@ perSystem:
 
     # Services & system-level tools
     sunshine
+
+    epic-games
   ];
 
   system.defaults = {
