@@ -13,11 +13,19 @@ perSystem:
     settings = {
       # Multi-user daemon mode — requires build-users-group to delegate builds
       build-users-group = "nixbld";
-      trusted-users = [ "root" "keith" ];
-      allowed-users = [ "*" ];
-      experimental-features = [ "nix-command" "flakes" ];
+      experimental-features = [ "flakes" "nix-command" ];
+
+      # Build parallelism (auto = detect available cores)
+      max-jobs = "auto";
+
+      # Keep build logs and derivations for debugging
+      keep-build-log = true;
+      keep-derivations = true;
+
+      # Automatic store optimization disabled (matching committed default)
       auto-optimise-store = false;
-      sandbox = false;
+
+      # Binary cache substituters
       substituters = [ "https://cache.nixos.org/" ];
       trusted-public-keys = [ "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" ];
     };

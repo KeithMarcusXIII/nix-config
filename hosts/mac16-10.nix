@@ -17,5 +17,7 @@
     # Amount of idle time (in minutes) until displays sleep.
     display = 10;
   };
-  
+
+  # Host-specific nix daemon settings (overrides shared defaults)
+  nix.settings.trusted-users = [ "root" "@admin" ];
 }
