@@ -1,9 +1,6 @@
 perSystem:
 { lib, config, pkgs, ... }:
 {
-  # Let home-manager share the darwin nixpkgs instance (config + overlays)
-  home-manager.useGlobalPkgs = true;
-
   nixpkgs.config = {
     android_sdk.accept_license = true;
     allowUnfree = true;
@@ -48,8 +45,6 @@ perSystem:
 
     # Services & system-level tools
     sunshine
-
-    epic-games
   ];
 
   system.defaults = {
@@ -104,6 +99,7 @@ perSystem:
     casks = [
       "android-studio"
       "betterdisplay"
+      "epic-games"
       "mac-mouse-fix"
       "raycast"
       "rectangle-pro"

@@ -2,19 +2,23 @@
   description = "nix-config — macOS system configuration via nix-darwin";
 
   inputs = {
+    # ── Stable frameworks (predictable module system) ─────────
     flake-parts.url = "github:hercules-ci/flake-parts";
-    # nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-25.11-darwin";
-    # nix-darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-25.11";
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nix-darwin.url = "github:nix-darwin/nix-darwin/master";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nix-darwin.url = "github:LnL7/nix-darwin/nix-darwin-25.11";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
-    home-manager.url = "github:nix-community/home-manager";
+    home-manager.url = "github:nix-community/home-manager/release-25.11";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
+
+    # ── Rolling packages (bleeding-edge, standalone) ─────────
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+
+    # ── Tools (version-independent) ──────────────────────────
     bluebuild-cli.url = "github:blue-build/cli";
     bluebuild-cli.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ flake-parts, nix-darwin, home-manager, ... }:
+  outputs = inputs@{ flake-parts, nix-darwin, home-manager, nixpkgs-unstable, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } (
       { self, withSystem, moduleWithSystem, flake-parts-lib, ... }:
       let
@@ -41,7 +45,13 @@
           "x86_64-darwin"
         ];
 
-        perSystem = { pkgs, ... }: {
+        # ── perSystem: pkgs-unstable available to all modules ──
+        perSystem = { system, pkgs, ... }: {
+          _module.args.pkgs-unstable = import nixpkgs-unstable {
+            inherit system;
+            config.allowUnfree = true;
+          };
+
           devShells.default = pkgs.mkShell {
             packages = with pkgs; [
               nil           # Nix language server
@@ -50,24 +60,32 @@
           };
         };
 
-        flake.darwinConfigurations.mac16-10 = nix-darwin.lib.darwinSystem {
-          system = "aarch64-darwin";
-          modules = [
-            ./hosts/mac16-10.nix
-            self.darwinModules.default
-            home-manager.darwinModules.home-manager
-            {
-              home-manager.users.keith = {
-                imports = [
-                  self.homeManagerModules.cli-tools
-                  self.homeManagerModules.dev-sdks
-                  self.homeManagerModules.desktop-apps
-                ];
-                home.stateVersion = "25.05";
-              };
+        # ── darwinConfigurations: withSystem reaches into perSystem ──
+        flake.darwinConfigurations.mac16-10 = withSystem "aarch64-darwin"
+          ({ pkgs-unstable, ... }:
+            nix-darwin.lib.darwinSystem {
+              system = "aarch64-darwin";
+              specialArgs = { inherit pkgs-unstable; };
+              modules = [
+                ./hosts/mac16-10.nix
+                self.darwinModules.default
+                home-manager.darwinModules.home-manager
+                {
+                  home-manager.users.keith = {
+                    imports = [
+                      self.homeManagerModules.cli-tools
+                      self.homeManagerModules.dev-sdks
+                      self.homeManagerModules.desktop-apps
+                    ];
+                    home.stateVersion = "25.11";
+                  };
+                  home-manager.useGlobalPkgs = true;
+                  home-manager.useUserPackages = true;
+                  home-manager.extraSpecialArgs = { inherit pkgs-unstable; };
+                }
+              ];
             }
-          ];
-        };
+          );
       }
     );
 }
