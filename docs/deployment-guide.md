@@ -60,19 +60,36 @@ darwin-rebuild switch --flake .#mac16-10 --target-host keith@mac16-10
 
 ## Environment Configuration
 
-### Nix Flake Settings
+### Flake Input Branches
 
-- **nixpkgs:** `nixpkgs-unstable` (pinned via `flake.lock`)
-- **nix-darwin:** `master` branch (follows nixpkgs)
-- **home-manager:** follows nixpkgs
+| Input | Branch | Role |
+|-------|--------|------|
+| `nixpkgs` | `nixos-25.11` (stable) | System infrastructure |
+| `nixpkgs-unstable` | `nixpkgs-unstable` (rolling) | Bleeding-edge user packages (opt-in) |
+| `nix-darwin` | `nix-darwin-25.11` (stable) | macOS system module framework |
+| `home-manager` | `release-25.11` (stable) | User environment module framework |
+| `flake-parts` | default (main) | Module composition framework |
+
+Stable frameworks + rolling packages = predictable module system with latest user tools.
 
 ### Host Configuration ([`hosts/mac16-10.nix`](../hosts/mac16-10.nix))
 
 | Setting | Value |
 |---------|-------|
-| `system.stateVersion` | 5 |
+| `system.stateVersion` | 6 |
 | `system.primaryUser` | keith |
 | `users.users.keith.home` | /Users/keith |
+
+### Nix Daemon Configuration ([`darwinModules/default.nix`](../flake-modules/darwin/darwinModules/default.nix))
+
+| Setting | Value | Scope |
+|---------|-------|-------|
+| `nix.settings.build-users-group` | nixbld | Shared (universal) |
+| `nix.settings.experimental-features` | flakes nix-command | Shared (universal) |
+| `nix.settings.max-jobs` | auto | Shared (universal) |
+| `nix.settings.trusted-users` | root @admin | Host-specific in [`hosts/mac16-10.nix`](../hosts/mac16-10.nix) |
+
+> **Pattern**: Universal `nix.settings` go in the shared darwin module. Host-specific overrides (like `trusted-users`) go in the host file. The nix module system merges them at build time.
 
 ### Home Manager ([`homeManagerModules/default.nix`](../flake-modules/darwin/homeManagerModules/default.nix))
 
@@ -121,4 +138,4 @@ No CI/CD pipeline is currently configured. Deployment is manual via `darwin-rebu
 
 ---
 
-_Generated: 2026-05-10 | Scan Level: Quick_
+_Generated: 2026-05-17 | Scan Level: Quick_

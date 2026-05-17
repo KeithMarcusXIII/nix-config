@@ -123,9 +123,10 @@ flake.nix
   │
   ├─ inputs
   │   ├─ flake-parts          → flake-parts.lib.mkFlake
-  │   ├─ nixpkgs              → nixpkgs-unstable (follows to nix-darwin, home-manager)
-  │   ├─ nix-darwin           → nix-darwin.lib.darwinSystem
-  │   └─ home-manager         → home-manager.darwinModules.home-manager
+  │   ├─ nixpkgs              → nixos-25.11 (stable — follows to nix-darwin, home-manager)
+  │   ├─ nixpkgs-unstable     → standalone input (NO follows — bleeding-edge packages only)
+  │   ├─ nix-darwin           → nix-darwin-25.11 (stable — follows nixpkgs)
+  │   └─ home-manager         → release-25.11 (stable — follows nixpkgs)
   │
   ├─ mkFlake { inherit inputs; } ({ withSystem, moduleWithSystem, flake-parts-lib, ... }:
   │   let
@@ -138,30 +139,42 @@ flake.nix
   │     imports = [ darwin-mod cli-tools-mod dev-sdks-mod desktop-apps-mod ];
   │     systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
   │
-  │     perSystem = { pkgs, ... }: {
+  │     perSystem = { system, pkgs, ... }: {
+  │       # pkgs-unstable: bleeding-edge packages (opt-in by modules)
+  │       _module.args.pkgs-unstable = import inputs.nixpkgs-unstable {
+  │         inherit system;
+  │         config.allowUnfree = true;
+  │       };
   │       devShells.default = pkgs.mkShell {
   │         packages = [ pkgs.nil pkgs.alejandra ];
   │       };
   │     };
   │
-  │     flake.darwinConfigurations.mac16-10 = nix-darwin.lib.darwinSystem {
-  │       system = "aarch64-darwin";
-  │       modules = [
-  │         ./hosts/mac16-10.nix              ←── Host identity
-  │         self.darwinModules.default         ←── System-level (darwin module)
-  │         home-manager.darwinModules.home-manager
-  │         {
-  │           home-manager.users.keith = {
-  │             imports = [
-  │               self.homeManagerModules.cli-tools    ←── CLI tools
-  │               self.homeManagerModules.dev-sdks     ←── Dev SDKs
-  │               self.homeManagerModules.desktop-apps ←── Desktop apps
-  │             ];
-  │             home.stateVersion = "25.05";
-  │           };
+  │     flake.darwinConfigurations.mac16-10 = withSystem "aarch64-darwin"
+  │       ({ pkgs-unstable, ... }:
+  │         nix-darwin.lib.darwinSystem {
+  │           system = "aarch64-darwin";
+  │           specialArgs = { inherit pkgs-unstable; };  # → darwin modules
+  │           modules = [
+  │             ./hosts/mac16-10.nix              ←── Host identity (trusted-users here)
+  │             self.darwinModules.default         ←── System-level (nix.settings universal defaults)
+  │             home-manager.darwinModules.home-manager
+  │             {
+  │               home-manager.users.keith = {
+  │                 imports = [
+  │                   self.homeManagerModules.cli-tools    ←── CLI tools
+  │                   self.homeManagerModules.dev-sdks     ←── Dev SDKs
+  │                   self.homeManagerModules.desktop-apps ←── Desktop apps
+  │                 ];
+  │                 home.stateVersion = "25.11";
+  │               };
+  │               home-manager.useGlobalPkgs = true;
+  │               home-manager.useUserPackages = true;
+  │               home-manager.extraSpecialArgs = { inherit pkgs-unstable; };  # → HM modules
+  │             }
+  │           ];
   │         }
-  │       ];
-  │     };
+  │       );
   │   }
   │ )
   │
@@ -217,6 +230,7 @@ perSystem:                    # ← Injected by moduleWithSystem wrapper
 - `perSystem` gives access to `perSystem.config` for cross-module package references
 - `config` is the nix-darwin system configuration
 - `pkgs` is the nixpkgs instance for the target system
+- `pkgs-unstable` is available via `specialArgs` — add to signature to access bleeding-edge packages (e.g., `{ pkgs-unstable, ... }:`)
 
 ### homeManagerModules (User-Level — Three Named Modules)
 
@@ -245,7 +259,9 @@ perSystem:                    # ← Injected by moduleWithSystem wrapper
 | Project DevShell | `pkgs.mkShell` | Workspace tools (nil, alejandra) via nix-direnv | `.envrc`: `use flake` |
 | macOS System | `nix-darwin.lib.darwinSystem` | macOS system configuration builder | `darwinSystem { system, modules }` |
 | User Config | `home-manager.darwinModules.home-manager` | User environment management | `home-manager.users.<name>.imports` |
-| Package Source | `nixpkgs` (unstable) | All package derivations | Followed by nix-darwin + home-manager |
+| Package Source (Stable) | `nixpkgs` (nixos-25.11) | System infrastructure (followed by nix-darwin + home-manager) | Stable, predictable, no breakage |
+| Package Source (Unstable) | `nixpkgs-unstable` (nixpkgs-unstable) | Bleeding-edge user packages (standalone, no follows) | Opt-in per module via `_module.args.pkgs-unstable` |
+| Daemon Config | `nix.settings` | nix-daemon configuration | Universal defaults in darwin module, host overrides in host file |
 
 ## Design Principles
 
@@ -256,7 +272,10 @@ perSystem:                    # ← Injected by moduleWithSystem wrapper
 5. **`localFlake`/`self` separation**: Internal module references use `localFlake`; cross-module/flake-level references use `self`
 6. **Workspace DX**: `nix-direnv` + `.envrc` provides instant devShell on `cd` into the repository
 7. **macOS-native testing**: `runNixOSTest` is unavailable; use `pkgs.runCommand` for perSystem checks and `nix build .#darwinConfigurations.<host>.system` for integration validation
+8. **Stable frameworks + rolling packages**: `nix-darwin` and `home-manager` pinned to stable branches; `nixpkgs-unstable` is a dedicated input for bleeding-edge packages — opt-in per module via `pkgs-unstable`
+9. **`nix.settings` split**: Universal daemon settings in shared `darwinModules/default.nix`; host-specific overrides in `hosts/<hostname>.nix` — nix module system merges at build time
+10. **Diagnostics-first derivation**: Run `nix show-config` on target to capture actual resolved config before codifying `nix.settings`; validate assumptions with targeted commands (e.g., `dseditgroup`, `groups`)
 
 ---
 
-_Generated: 2026-05-13 | Scan Level: Deep_
+_Generated: 2026-05-17 | Scan Level: Deep_

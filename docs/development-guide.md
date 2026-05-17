@@ -107,6 +107,53 @@ git add flake.lock
 2. Add `darwinConfigurations.<hostname>` in [`flake.nix`](../flake.nix)
 3. Ensure shared modules remain host-agnostic (use module options, not hardcoded names)
 
+### `nix.settings` Split Pattern
+
+**Rule**: Universal daemon settings go in the shared darwin module. Host-specific overrides go in the host file.
+
+- Shared (in [`darwinModules/default.nix`](../flake-modules/darwin/darwinModules/default.nix)):
+  ```nix
+  nix.settings = {
+    build-users-group = "nixbld";
+    experimental-features = [ "flakes" "nix-command" ];
+    max-jobs = "auto";
+  };
+  ```
+- Host-specific (in [`hosts/mac16-10.nix`](../hosts/mac16-10.nix)):
+  ```nix
+  nix.settings.trusted-users = [ "root" "@admin" ];
+  ```
+- The nix module system merges both at build time.
+
+### Using `pkgs-unstable` for Bleeding-Edge Packages
+
+When you need the latest version of a package from `nixpkgs-unstable` instead of the stable `nixos-25.11`:
+
+1. Add `{ pkgs-unstable, ... }` to the module's function signature.
+2. Reference packages via `pkgs-unstable.<name>` instead of `pkgs.<name>`.
+
+```nix
+# darwinModules/default.nix — mix stable + unstable packages
+perSystem:
+{ lib, config, pkgs, pkgs-unstable, ... }:
+{
+  environment.systemPackages = with pkgs; [
+    git            # from stable — no need for latest
+    ripgrep
+  ] ++ (with pkgs-unstable; [
+    qemu           # bleeding-edge from unstable
+    neovim
+  ]);
+}
+```
+
+`pkgs-unstable` is available in:
+- `perSystem` modules (via `_module.args`)
+- nix-darwin modules (via `specialArgs`)
+- home-manager modules (via `home-manager.extraSpecialArgs`)
+
+Any module that doesn't add `pkgs-unstable` to its signature simply ignores it — opt-in only.
+
 ## Testing
 
 ```bash
@@ -153,4 +200,4 @@ For the complete methodology on discovering, evaluating, and adding applications
 
 ---
 
-_Generated: 2026-05-10 | Scan Level: Deep_
+_Generated: 2026-05-17 | Scan Level: Deep_
