@@ -95,6 +95,7 @@ perSystem:
         name = "omlx";
         start_service = true;
       }
+      "sunshine"
     ];
     casks = [
       "android-studio"
@@ -106,7 +107,6 @@ perSystem:
       "stats"
       "zen"
       "vscodium"
-      "sunshine"
     ];
   };
 }
