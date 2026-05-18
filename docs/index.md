@@ -24,6 +24,7 @@
 - [Architecture](./architecture.md) — Deep module pattern analysis with reference comparison
 - [Source Tree Analysis](./source-tree-analysis.md) — Full annotated tree with reference comparison
 - [Development Guide](./development-guide.md) — Daily workflow, validation, module patterns, code style
+- [Flake + Direnv + nix-direnv Guide](./flake-direnv-guide.md) — Automatic dev shell setup with cached evaluation
 - [Adding Applications Guide](./adding-applications-guide.md) — Full methodology: research, categorization, implementation, validation
 - [Deployment Guide](./deployment-guide.md)
 
