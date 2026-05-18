@@ -107,6 +107,7 @@ perSystem:
       "stats"
       "zen"
       "vscodium"
+      "tabby"
     ];
   };
 }
