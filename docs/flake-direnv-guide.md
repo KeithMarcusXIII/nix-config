@@ -56,13 +56,13 @@ These are already installed by this nix-config and require no manual setup:
 
 | Component | How It's Installed | Source |
 |-----------|-------------------|--------|
-| `direnv` | user package (`home.packages`) | [`flake-modules/cli-tools/homeManagerModules/default.nix`](../flake-modules/cli-tools/homeManagerModules/default.nix:8) |
-| `nix-direnv` | user package (`home.packages`) | [`flake-modules/cli-tools/homeManagerModules/default.nix`](../flake-modules/cli-tools/homeManagerModules/default.nix:11) |
+| `direnv` | home-manager `programs.direnv` module | [`flake-modules/cli-tools/homeManagerModules/default.nix`](../flake-modules/cli-tools/homeManagerModules/default.nix:9) |
+| `nix-direnv` | home-manager `programs.direnv.nix-direnv` submodule | [`flake-modules/cli-tools/homeManagerModules/default.nix`](../flake-modules/cli-tools/homeManagerModules/default.nix:10) |
 | Nix daemon with flakes | system-level (`nix.settings.experimental-features`) | [`flake-modules/darwin/darwinModules/default.nix`](../flake-modules/darwin/darwinModules/default.nix:13) |
 | Dev shell definition | `devShells.default` in flake outputs | [`flake.nix`](../flake.nix:55) |
 | `.envrc` | project root file | [`../.envrc`](../.envrc:1) |
 
-> **New to the host?** After deploying with `darwin-rebuild switch --flake .#mac16-10`, the packages above become available to user `keith`. If direnv doesn't work right away, see [Troubleshooting](#troubleshooting).
+> **New to the host?** After deploying with `darwin-rebuild switch --flake .#mac16-10`, the `programs.direnv` module wires everything up automatically — installs direnv, nix-direnv, adds the shell hook, and configures caching. Just run `direnv allow` and you're set. If direnv doesn't work right away, see [Troubleshooting](#troubleshooting).
 
 ---
 
@@ -73,14 +73,10 @@ These are already installed by this nix-config and require no manual setup:
 git clone <repo-url> nix-config
 cd nix-config
 
-# 2. Configure nix-direnv (one-time, if not already done)
-mkdir -p ~/.config/direnv
-echo 'source $HOME/.nix-profile/share/nix-direnv/direnvrc' >> ~/.config/direnv/direnvrc
-
-# 3. Grant direnv permission
+# 2. Grant direnv permission
 direnv allow
 
-# 4. Watch the magic — nix-direnv evaluates the flake shell
+# 3. Watch the magic — nix-direnv evaluates the flake shell
 #    First run is slow (builds the dev shell derivation).
 #    Subsequent runs are nearly instant (cached).
 ```
@@ -208,26 +204,13 @@ The `devShells.default` attribute is what `use flake` resolves. You can extend t
 In [`cli-tools/homeManagerModules/default.nix`](../flake-modules/cli-tools/homeManagerModules/default.nix), both `direnv` and `nix-direnv` are declared as `home.packages`:
 
 ```nix
-home.packages = with pkgs; [
-  bat
-  # ...
-  direnv            # Per-directory environment variables
-  # ...
-  nix-direnv        # Fast cached nix-direnv for direnv
-  # ...
-];
-```
-`nix-direnv` requires one-time configuration to hook into direnv. You need to create (or edit) `~/.config/direnv/direnvrc` and source its direnvrc file:
-
-```bash
-# Create the direnv config directory
-mkdir -p ~/.config/direnv
-
-# Add nix-direnv's direnvrc
-echo 'source $HOME/.nix-profile/share/nix-direnv/direnvrc' >> ~/.config/direnv/direnvrc
+programs.direnv = {
+  enable = true;
+  nix-direnv.enable = true;
+};
 ```
 
-Alternatively, you can manage this with [`home-manager`'s `programs.direnv` module](https://nix-community.github.io/home-manager/options.xhtml#opt-programs.direnv.enable), which wires everything up automatically. For this project, `direnv` and `nix-direnv` are installed as plain `home.packages`, so the manual step above is needed.
+This is declared in [`cli-tools/homeManagerModules/default.nix`](../flake-modules/cli-tools/homeManagerModules/default.nix:9) and wires everything up automatically — installs the binaries, adds the shell hook to `~/.zshrc`, and configures nix-direnv caching. No manual config files needed.
 
 Once configured, `use flake` in `.envrc` will use `nix-direnv`'s cached evaluation instead of direnv's built-in (slower) flake support.
 
@@ -235,7 +218,7 @@ Once configured, `use flake` in `.envrc` will use `nix-direnv`'s cached evaluati
 
 ## Using With Other Projects
 
-The `direnv` and `nix-direnv` packages are installed **permanently** at the user level on `mac16-10`. Once configured, they work with **any project**, not just this nix-config repo.
+The `programs.direnv` module installs and configures direnv + nix-direnv permanently on `mac16-10`. Once deployed, they work with **any project**, not just this nix-config repo.
 
 ### What You Need in the Other Project
 
@@ -373,22 +356,22 @@ direnv allow
 ```
 ### nix-direnv not providing caching (output doesn't mention "nix-direnv")
 
-If `direnv allow` output doesn't include a line like `direnv: nix-direnv: using cached dev shell`, then nix-direnv isn't wired up. Check:
+If `direnv allow` output doesn't include a line like `direnv: nix-direnv: using cached dev shell`, then nix-direnv isn't wired up. The `programs.direnv` module should handle this automatically after `darwin-rebuild switch`.
+
+To verify it's active:
 
 ```bash
-# Verify nix-direnv is installed
 which nix-direnv
 # → /nix/store/...-nix-direnv-.../bin/nix-direnv
 
-# Verify the direnvrc source is present
+# Check the HM-managed config (wired automatically)
 cat ~/.config/direnv/direnvrc
-# Should contain: source $HOME/.nix-profile/share/nix-direnv/direnvrc
 ```
 
-If missing, configure it:
+If missing after a deploy, ensure `programs.direnv.enable` and `programs.direnv.nix-direnv.enable` are both set to `true` in [`cli-tools/homeManagerModules/default.nix`](../flake-modules/cli-tools/homeManagerModules/default.nix). Then redeploy:
 
 ```bash
-echo 'source $HOME/.nix-profile/share/nix-direnv/direnvrc' >> ~/.config/direnv/direnvrc
+darwin-rebuild switch --flake .#mac16-10
 ```
 
 Then reload:
