@@ -28,6 +28,22 @@ perSystem:
     };
   };
 
+  # Autostart colima at login via LaunchAgent (brew services won't work for nix-installed colima)
+  # launchd.user.agents.colima = {
+  #   enable = true;
+  #   serviceConfig = {
+  #     Label = "com.github.colima";
+  #     ProgramArguments = [
+  #       "${pkgs-unstable.colima}/bin/colima"
+  #       "start"
+  #     ];
+  #     RunAtLoad = true;
+  #     KeepAlive = false;
+  #     StandardOutPath = "/tmp/colima.stdout.log";
+  #     StandardErrorPath = "/tmp/colima.stderr.log";
+  #   };
+  # };
+
   environment.systemPackages = with pkgs; [
     # Core CLI utilities
     ripgrep

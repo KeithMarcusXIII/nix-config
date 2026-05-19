@@ -11,11 +11,14 @@ perSystem:
     pkgs-unstable.devbox #
   ];
 
-  programs.direnv = {
-    enable = true;
-  };
+  programs.direnv.enable = true;
 
-  programs.zsh.enable = true;
+  programs.zsh = {
+    enable = true;
+    profileExtra = ''
+      eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+    '';
+  };
 
   programs.git = {
     enable = true;
