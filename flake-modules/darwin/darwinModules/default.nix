@@ -30,7 +30,6 @@ perSystem:
 
   environment.systemPackages = with pkgs; [
     # Core CLI utilities
-    git
     ripgrep
     wget
     tree
