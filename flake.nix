@@ -18,18 +18,28 @@
     bluebuild-cli.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = inputs@{ flake-parts, nix-darwin, home-manager, nixpkgs-unstable, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } (
-      { self, withSystem, moduleWithSystem, flake-parts-lib, ... }:
-      let
+  outputs = inputs @ {
+    flake-parts,
+    nix-darwin,
+    home-manager,
+    nixpkgs-unstable,
+    ...
+  }:
+    flake-parts.lib.mkFlake {inherit inputs;} (
+      {
+        self,
+        withSystem,
+        moduleWithSystem,
+        flake-parts-lib,
+        ...
+      }: let
         inherit (flake-parts-lib) importApply;
 
-        darwin-mod      = importApply ./flake-modules/darwin        { inherit withSystem moduleWithSystem importApply; };
-        cli-tools-mod   = importApply ./flake-modules/cli-tools     { inherit withSystem moduleWithSystem importApply; };
-        dev-sdks-mod    = importApply ./flake-modules/dev-sdks      { inherit withSystem moduleWithSystem importApply; };
-        desktop-apps-mod = importApply ./flake-modules/desktop-apps { inherit withSystem moduleWithSystem importApply; };
-      in
-      {
+        darwin-mod = importApply ./flake-modules/darwin {inherit withSystem moduleWithSystem importApply;};
+        cli-tools-mod = importApply ./flake-modules/cli-tools {inherit withSystem moduleWithSystem importApply;};
+        dev-sdks-mod = importApply ./flake-modules/dev-sdks {inherit withSystem moduleWithSystem importApply;};
+        desktop-apps-mod = importApply ./flake-modules/desktop-apps {inherit withSystem moduleWithSystem importApply;};
+      in {
         imports = [
           ./flake-modules/mkHomeManagerOutputsMerge.nix
           darwin-mod
@@ -46,7 +56,11 @@
         ];
 
         # ── perSystem: pkgs-unstable available to all modules ──
-        perSystem = { system, pkgs, ... }: {
+        perSystem = {
+          system,
+          pkgs,
+          ...
+        }: {
           _module.args.pkgs-unstable = import nixpkgs-unstable {
             inherit system;
             config.allowUnfree = true;
@@ -54,37 +68,39 @@
 
           devShells.default = pkgs.mkShell {
             packages = with pkgs; [
-              nil           # Nix language server
-              alejandra     # Nix formatter
+              nil # Nix language server
+              alejandra # Nix formatter
             ];
           };
         };
 
         # ── darwinConfigurations: withSystem reaches into perSystem ──
-        flake.darwinConfigurations.mac16-10 = withSystem "aarch64-darwin"
-          ({ pkgs-unstable, ... }:
-            nix-darwin.lib.darwinSystem {
-              system = "aarch64-darwin";
-              specialArgs = { inherit pkgs-unstable; };
-              modules = [
-                ./hosts/mac16-10.nix
-                self.darwinModules.default
-                home-manager.darwinModules.home-manager
-                {
-                  home-manager.users.keith = {
-                    imports = [
-                      self.homeManagerModules.cli-tools
-                      self.homeManagerModules.dev-sdks
-                      self.homeManagerModules.desktop-apps
-                    ];
-                    home.stateVersion = "25.11";
-                  };
-                  home-manager.useGlobalPkgs = true;
-                  home-manager.useUserPackages = true;
-                  home-manager.extraSpecialArgs = { inherit pkgs-unstable; };
-                }
-              ];
-            }
+        flake.darwinConfigurations.mac16-10 =
+          withSystem "aarch64-darwin"
+          (
+            {pkgs-unstable, ...}:
+              nix-darwin.lib.darwinSystem {
+                system = "aarch64-darwin";
+                specialArgs = {inherit pkgs-unstable;};
+                modules = [
+                  ./hosts/mac16-10.nix
+                  self.darwinModules.default
+                  home-manager.darwinModules.home-manager
+                  {
+                    home-manager.users.keith = {
+                      imports = [
+                        self.homeManagerModules.cli-tools
+                        self.homeManagerModules.dev-sdks
+                        self.homeManagerModules.desktop-apps
+                      ];
+                      home.stateVersion = "25.11";
+                    };
+                    home-manager.useGlobalPkgs = true;
+                    home-manager.useUserPackages = true;
+                    home-manager.extraSpecialArgs = {inherit pkgs-unstable;};
+                  }
+                ];
+              }
           );
       }
     );

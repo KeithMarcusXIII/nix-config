@@ -8,23 +8,45 @@ perSystem:
     eza                  # Modern ls replacement
     fd                   # Modern find replacement
     tmux                 # Terminal multiplexer
-    pkgs-unstable.devbox #
+    # pkgs-unstable.devbox #
+    pkgs-unstable.devenv #
   ];
 
-  programs.direnv.enable = true;
-
-  programs.zsh = {
-    enable = true;
-    profileExtra = ''
-      eval "$(/opt/homebrew/bin/brew shellenv zsh)"
-    '';
+  # ── Enable flags ──────────────────────────────────────────────────
+  # Toggle these at a glance without digging into config details below
+  programs = {
+    direnv.enable = true;
+    zsh.enable = true;
+    git.enable = true;
+    mise.enable = true;
   };
 
-  programs.git = {
-    enable = true;
-    settings.user = {
-      email = "kmarcusxiii@gmail.com";
-      name = "Keith";
+  # ── Program configurations ────────────────────────────────────────
+  programs = {
+    direnv = {
+      mise.enable = true;
+    };
+
+    zsh = {
+      initContent = ''
+        eval "$(/opt/homebrew/bin/brew shellenv zsh)"
+        # eval "$(devbox global shellenv)"
+      '';
+    };
+
+    git = {
+      settings.user = {
+        email = "kmarcusxiii@gmail.com";
+        name = "Keith";
+      };
+    };
+
+    mise = {
+      enableZshIntegration = true;
+      # globalConfig kept empty — mise/config.toml written manually via xdg.configFile
+      # because the TOML serializer expands nested attrsets into [parent.child] headers
+      # which mise's parser doesn't support for [env.*] entries.
+      globalConfig = { };
     };
   };
 }

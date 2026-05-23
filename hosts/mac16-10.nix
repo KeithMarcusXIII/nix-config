@@ -16,6 +16,8 @@
     computer = "never";
     # Amount of idle time (in minutes) until displays sleep.
     display = 10;
+    # Amount of idle time (in minutes) until hard disks sleep.
+    harddisk = "never";
   };
 
   # Host-specific nix daemon settings (overrides shared defaults)
