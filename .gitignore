@@ -15,3 +15,6 @@ _bmad*
 secrets/**/*.plain.yaml
 secrets/**/*.dec.yaml
 secrets/**/*.unencrypted.yaml
+
+nix.conf
+nix.conf.d/*.conf
