@@ -27,9 +27,16 @@ perSystem: {
     end if
   '';
 in {
-  # ── sops-nix: age key for secret decryption ─────────────────
+  # ── sops-nix: decrypt GitHub token to nix.conf include dir ──
   sops = {
     age.keyFile = "${config.users.users.keith.home}/.config/sops/age/keys.txt";
+    defaultSopsFile = ../../../secrets/secrets.yaml;
+    secrets."github-token" = {
+      path = "${config.users.users.keith.home}/.config/nix/nix.conf.d/50-github-token.conf";
+      owner = config.users.users.keith.name;
+      group = "staff";
+      mode = "0400";
+    };
   };
 
   nixpkgs.config = {

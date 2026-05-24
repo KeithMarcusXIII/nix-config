@@ -95,7 +95,6 @@
                   {
                     home-manager.users.keith = {
                       imports = [
-                        sops-nix.homeManagerModules.sops
                         self.homeManagerModules.darwin
                         self.homeManagerModules.cli-tools
                         self.homeManagerModules.dev-sdks

@@ -10,6 +10,7 @@ perSystem:
     tmux                 # Terminal multiplexer
     # pkgs-unstable.devbox #
     pkgs-unstable.devenv #
+    sops                 # Secret editor for sops-nix
   ];
 
   # ── Enable flags ──────────────────────────────────────────────────
@@ -28,6 +29,10 @@ perSystem:
     };
 
     zsh = {
+      envExtra = ''
+        # sops-nix age key — lets CLI `sops` find the decryption key
+        export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+      '';
       initContent = ''
         eval "$(/opt/homebrew/bin/brew shellenv zsh)"
         # eval "$(devbox global shellenv)"

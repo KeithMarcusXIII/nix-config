@@ -6,15 +6,9 @@ perSystem:
   # See flake.nix → home-manager.users.keith.imports
   home.packages = [ ];
 
-  # ── sops-nix: decrypt GitHub token to nix.conf include dir ──
-  sops.secrets."github-token" = {
-    sopsFile = ../../../secrets/secrets.yaml;
-    path = "${config.home.homeDirectory}/.config/nix/nix.conf.d/50-github-token.conf";
-    owner = config.users.users.keith.name;
-    group = "staff";
-  };
-
-  # ── nix.conf: include the decrypted snippet ─────────────────
+  # ── nix.conf: include decrypted GitHub token snippet ────────
+  # The token is decrypted by darwinModules sops-nix activation
+  # (runs as root during darwin-rebuild switch).
   nix.extraOptions = ''
     !include ${config.home.homeDirectory}/.config/nix/nix.conf.d/50-github-token.conf
   '';
