@@ -6,7 +6,16 @@ perSystem:
   # See flake.nix → home-manager.users.keith.imports
   home.packages = [ ];
 
+  # ── sops-nix: decrypt GitHub token to nix.conf include dir ──
+  sops.secrets."github-token" = {
+    sopsFile = ../../../secrets/secrets.yaml;
+    path = "${config.home.homeDirectory}/.config/nix/nix.conf.d/50-github-token.conf";
+    owner = config.users.users.keith.name;
+    group = "staff";
+  };
+
+  # ── nix.conf: include the decrypted snippet ─────────────────
   nix.extraOptions = ''
-    access-tokens = github.com=<GITHUB_TOKEN>
+    !include ${config.home.homeDirectory}/.config/nix/nix.conf.d/50-github-token.conf
   '';
 }

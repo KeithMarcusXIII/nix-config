@@ -27,6 +27,11 @@ perSystem: {
     end if
   '';
 in {
+  # ── sops-nix: age key for secret decryption ─────────────────
+  sops = {
+    age.keyFile = "${config.users.users.keith.home}/.config/sops/age/keys.txt";
+  };
+
   nixpkgs.config = {
     android_sdk.accept_license = true;
     allowUnfree = true;

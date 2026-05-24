@@ -10,7 +10,12 @@ localFlake:
       );
     };
 
-  flake.darwinModules.default = localFlake.moduleWithSystem (
-    perSystem@{ config }: localFlake.importApply ./darwinModules perSystem
-  );
+  flake = {
+    darwinModules.default = localFlake.moduleWithSystem (
+      perSystem@{ config }: localFlake.importApply ./darwinModules perSystem
+    );
+    homeManagerModules.darwin = localFlake.moduleWithSystem (
+      perSystem@{ config }: localFlake.importApply ./homeManagerModules perSystem
+    );
+  };
 }

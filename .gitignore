@@ -10,3 +10,8 @@ result-*
 _bmad*
 .claude
 .agents
+
+# sops-nix: never commit plaintext secrets
+secrets/**/*.plain.yaml
+secrets/**/*.dec.yaml
+secrets/**/*.unencrypted.yaml

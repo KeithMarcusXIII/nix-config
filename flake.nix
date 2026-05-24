@@ -16,6 +16,10 @@
     # ── Tools (version-independent) ──────────────────────────
     bluebuild-cli.url = "github:blue-build/cli";
     bluebuild-cli.inputs.nixpkgs.follows = "nixpkgs";
+
+    # ── Secret management ──────────────────────────────────
+    sops-nix.url = "github:Mic92/sops-nix";
+    sops-nix.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = inputs @ {
@@ -23,6 +27,7 @@
     nix-darwin,
     home-manager,
     nixpkgs-unstable,
+    sops-nix,
     ...
   }:
     flake-parts.lib.mkFlake {inherit inputs;} (
@@ -86,9 +91,12 @@
                   ./hosts/mac16-10.nix
                   self.darwinModules.default
                   home-manager.darwinModules.home-manager
+                  sops-nix.darwinModules.sops
                   {
                     home-manager.users.keith = {
                       imports = [
+                        sops-nix.homeManagerModules.sops
+                        self.homeManagerModules.darwin
                         self.homeManagerModules.cli-tools
                         self.homeManagerModules.dev-sdks
                         self.homeManagerModules.desktop-apps
