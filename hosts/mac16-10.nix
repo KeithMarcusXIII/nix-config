@@ -1,5 +1,9 @@
-{ config, pkgs, lib, ... }:
 {
+  config,
+  pkgs,
+  lib,
+  ...
+}: {
   system.stateVersion = 6;
   system.primaryUser = "keith";
 
@@ -21,5 +25,5 @@
   };
 
   # Host-specific nix daemon settings (overrides shared defaults)
-  nix.settings.trusted-users = [ "root" "@admin" ];
+  nix.settings.trusted-users = ["root" "@admin"];
 }

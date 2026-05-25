@@ -1,16 +1,20 @@
-perSystem:
-{ lib, config, pkgs, pkgs-unstable, ... }:
-{
+perSystem: {
+  lib,
+  config,
+  pkgs,
+  pkgs-unstable,
+  ...
+}: {
   home.packages = with pkgs; [
-    bat                  # cat with syntax highlighting
-    btop                 # Process/resource monitor
-    delta                # git diff viewer
-    eza                  # Modern ls replacement
-    fd                   # Modern find replacement
-    tmux                 # Terminal multiplexer
+    bat # cat with syntax highlighting
+    btop # Process/resource monitor
+    delta # git diff viewer
+    eza # Modern ls replacement
+    fd # Modern find replacement
+    tmux # Terminal multiplexer
     # pkgs-unstable.devbox #
     pkgs-unstable.devenv #
-    sops                 # Secret editor for sops-nix
+    sops # Secret editor for sops-nix
   ];
 
   # ── Enable flags ──────────────────────────────────────────────────
@@ -51,7 +55,7 @@ perSystem:
       # globalConfig kept empty — mise/config.toml written manually via xdg.configFile
       # because the TOML serializer expands nested attrsets into [parent.child] headers
       # which mise's parser doesn't support for [env.*] entries.
-      globalConfig = { };
+      globalConfig = {};
     };
   };
 }

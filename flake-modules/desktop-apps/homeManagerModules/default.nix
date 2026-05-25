@@ -1,9 +1,13 @@
-perSystem:
-{ lib, config, pkgs, pkgs-unstable, ... }:
-{
+perSystem: {
+  lib,
+  config,
+  pkgs,
+  pkgs-unstable,
+  ...
+}: {
   home.packages = with pkgs-unstable; [
-    iina              # Modern media player
-    moonlight-qt      # NVIDIA GameStream / Sunshine client
-    wechat            # WeChat desktop client
+    iina # Modern media player
+    moonlight-qt # NVIDIA GameStream / Sunshine client
+    wechat # WeChat desktop client
   ];
 }

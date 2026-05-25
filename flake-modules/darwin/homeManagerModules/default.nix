@@ -1,10 +1,13 @@
-perSystem:
-{ lib, config, pkgs, ... }:
-{
+perSystem: {
+  lib,
+  config,
+  pkgs,
+  ...
+}: {
   # All user packages migrated to named homeManagerModules:
   #   cli-tools, dev-sdks, desktop-apps
   # See flake.nix → home-manager.users.keith.imports
-  home.packages = [ ];
+  home.packages = [];
 
   # ── nix.conf: include decrypted GitHub token snippet ────────
   # The token is decrypted by darwinModules sops-nix activation
