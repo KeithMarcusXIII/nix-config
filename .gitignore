@@ -18,6 +18,7 @@ secrets/**/*.unencrypted.yaml
 
 nix.conf
 nix.conf.d/*.conf
+
 # Devenv
 .devenv*
 devenv.local.nix
@@ -28,3 +29,4 @@ devenv.local.yaml
 
 # pre-commit
 .pre-commit-config.yaml
+
