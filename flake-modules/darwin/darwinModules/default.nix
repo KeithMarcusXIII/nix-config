@@ -27,7 +27,7 @@ perSystem: {
     end if
   '';
 in {
-  # ── sops-nix: decrypt GitHub token to nix.conf include dir ──
+  # ── sops-nix: decrypt secrets ───────────────────────────────
   sops = {
     age.keyFile = "${config.users.users.keith.home}/.config/sops/age/keys.txt";
     defaultSopsFile = ../../../secrets/secrets.yaml;
