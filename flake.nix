@@ -4,14 +4,14 @@
   inputs = {
     # ── Stable frameworks (predictable module system) ─────────
     flake-parts.url = "github:hercules-ci/flake-parts";
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
-    nix-darwin.url = "github:nix-darwin/nix-darwin/nix-darwin-25.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nix-darwin.url = "github:nix-darwin/nix-darwin/master";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
-    home-manager.url = "github:nix-community/home-manager/release-25.11";
+    home-manager.url = "github:nix-community/home-manager/master";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
     # ── Rolling packages (bleeding-edge, standalone) ─────────
-    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    # nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
     # ── Tools (version-independent) ──────────────────────────
     bluebuild-cli.url = "github:blue-build/cli";
@@ -20,14 +20,17 @@
     # ── Secret management ──────────────────────────────────
     sops-nix.url = "github:Mic92/sops-nix";
     sops-nix.inputs.nixpkgs.follows = "nixpkgs";
+
+    mcp-nixos.url = "github:utensils/mcp-nixos";
   };
 
   outputs = inputs @ {
     flake-parts,
     nix-darwin,
     home-manager,
-    nixpkgs-unstable,
+    # nixpkgs-unstable,
     sops-nix,
+    mcp-nixos,
     ...
   }:
     flake-parts.lib.mkFlake {inherit inputs;} (
@@ -60,17 +63,12 @@
           "x86_64-darwin"
         ];
 
-        # ── perSystem: pkgs-unstable available to all modules ──
+        # ── perSystem ───────────────────────────────────────────
         perSystem = {
           system,
           pkgs,
           ...
         }: {
-          _module.args.pkgs-unstable = import nixpkgs-unstable {
-            inherit system;
-            config.allowUnfree = true;
-          };
-
           devShells.default = pkgs.mkShell {
             packages = with pkgs; [
               nil # Nix language server
@@ -79,21 +77,32 @@
           };
         };
 
-        # ── darwinConfigurations: withSystem reaches into perSystem ──
+        # ── darwinConfigurations ──────────────────────────────────
         flake.darwinConfigurations.mac16-10 =
           withSystem "aarch64-darwin"
           (
-            {pkgs-unstable, ...}:
+            {...}:
               nix-darwin.lib.darwinSystem {
                 system = "aarch64-darwin";
-                specialArgs = {inherit pkgs-unstable;};
                 modules = [
                   ./hosts/mac16-10.nix
                   self.darwinModules.default
                   home-manager.darwinModules.home-manager
                   sops-nix.darwinModules.sops
+                  # Overlay: inject mcp-nixos into pkgs from flake input
+                  # inputs is accessible from the outer outputs function scope
+                  # final.system is nix-darwin's pkgs system — no recursion
+                  ({ config, lib, ... }: {
+                    nixpkgs.overlays = [(final: prev: {
+                      mcp-nixos = inputs.mcp-nixos.packages.${final.system}.default;
+                    })];
+                  })
                   {
                     home-manager.users.keith = {
+                      # HM-level overlay (robust: works with or without useGlobalPkgs)
+                      nixpkgs.overlays = [(final: prev: {
+                        mcp-nixos = inputs.mcp-nixos.packages.${final.system}.default;
+                      })];
                       imports = [
                         self.homeManagerModules.darwin
                         self.homeManagerModules.cli-tools
@@ -104,7 +113,6 @@
                     };
                     home-manager.useGlobalPkgs = true;
                     home-manager.useUserPackages = true;
-                    home-manager.extraSpecialArgs = {inherit pkgs-unstable;};
                   }
                 ];
               }

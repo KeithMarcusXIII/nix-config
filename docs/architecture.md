@@ -260,6 +260,8 @@ perSystem:                    # ← Injected by moduleWithSystem wrapper
 | macOS System | `nix-darwin.lib.darwinSystem` | macOS system configuration builder | `darwinSystem { system, modules }` |
 | User Config | `home-manager.darwinModules.home-manager` | User environment management | `home-manager.users.<name>.imports` |
 | Package Source (Stable) | `nixpkgs` (nixos-25.11) | System infrastructure (followed by nix-darwin + home-manager) | Stable, predictable, no breakage |
+| Framework (darwin) | `nix-darwin` (master) | macOS system module system (launchd, defaults, nix settings) | Rolling — latest module options |
+| Framework (user) | `home-manager` (master) | User environment module system (services, programs) | Rolling — latest module options like `services.colima` |
 | Package Source (Unstable) | `nixpkgs-unstable` (nixpkgs-unstable) | Bleeding-edge user packages (standalone, no follows) | Opt-in per module via `_module.args.pkgs-unstable` |
 | Daemon Config | `nix.settings` | nix-daemon configuration | Universal defaults in darwin module, host overrides in host file |
 
@@ -272,7 +274,7 @@ perSystem:                    # ← Injected by moduleWithSystem wrapper
 5. **`localFlake`/`self` separation**: Internal module references use `localFlake`; cross-module/flake-level references use `self`
 6. **Workspace DX**: `nix-direnv` + `.envrc` provides instant devShell on `cd` into the repository
 7. **macOS-native testing**: `runNixOSTest` is unavailable; use `pkgs.runCommand` for perSystem checks and `nix build .#darwinConfigurations.<host>.system` for integration validation
-8. **Stable frameworks + rolling packages**: `nix-darwin` and `home-manager` pinned to stable branches; `nixpkgs-unstable` is a dedicated input for bleeding-edge packages — opt-in per module via `pkgs-unstable`
+8. **Rolling frameworks + stable packages**: `nix-darwin` and `home-manager` track `master` for latest module definitions; `nixpkgs` stays on `nixos-25.11` for predictable system packages. `nixpkgs-unstable` is a dedicated input for bleeding-edge packages — opt-in per module via `pkgs-unstable`
 9. **`nix.settings` split**: Universal daemon settings in shared `darwinModules/default.nix`; host-specific overrides in `hosts/<hostname>.nix` — nix module system merges at build time
 10. **Diagnostics-first derivation**: Run `nix show-config` on target to capture actual resolved config before codifying `nix.settings`; validate assumptions with targeted commands (e.g., `dseditgroup`, `groups`)
 

@@ -154,6 +154,54 @@ perSystem:
 
 Any module that doesn't add `pkgs-unstable` to its signature simply ignores it — opt-in only.
 
+### Using External Flake Packages via `nixpkgs.overlays`
+
+External flake packages (not from nixpkgs) are made available as `pkgs.<name>` using `nixpkgs.overlays` in the darwin (and optionally home-manager) module list in [`flake.nix`](../flake.nix):
+
+```nix
+# Inside darwinConfigurations.modules — apply overlay to nix-darwin's pkgs
+({ config, lib, ... }: {
+  nixpkgs.overlays = [(final: prev: {
+    mcp-nixos = inputs.mcp-nixos.packages.${final.system}.default;
+  })];
+})
+```
+
+When `home-manager.useGlobalPkgs = false`, apply the same overlay inside the HM user config:
+
+```nix
+{
+  home-manager.users.keith = {
+    nixpkgs.overlays = [(final: prev: {
+      mcp-nixos = inputs.mcp-nixos.packages.${final.system}.default;
+    })];
+    # ... imports, home.stateVersion
+  };
+}
+```
+
+**How it reaches modules:** Once in `nixpkgs.overlays`, the package is available as `pkgs.<name>` everywhere — darwin modules, home-manager modules (when `useGlobalPkgs = true`), and any other code that uses that nixpkgs instance:
+
+```nix
+perSystem: { lib, config, pkgs, ... }: {
+  home.packages = with pkgs; [
+    mcp-nixos    # ← resolves via the overlay, no parameter declaration needed
+  ];
+}
+```
+
+**Why this works (and previous approaches failed):**
+
+| Approach | Result | Root Cause |
+|----------|--------|------------|
+| `import nixpkgs { overlays = [...]; }` in `_module.args.pkgs` | ❌ Recursion | `prev.system` references nixpkgs being built |
+| `pkgs.extend` in `_module.args.pkgs` | ❌ Recursion | flake-parts depends on `_module.args.pkgs` internally |
+| `pkgs // { ... }` in `_module.args.pkgs` | ❌ Recursion | Same internal dependency — mechanism doesn't matter |
+| `nixpkgs.overlays` in darwin/HM module list | ✅ Works | Applied during pkgs construction, not via flake-parts internals |
+
+For the full rationale and thought process, see the dedicated decision record:
+→ **[Architecture Decision: External Flake Packages via `nixpkgs.overlays`](../docs/decisions/mcp-nixos-overlay.md)**
+
 ## Testing
 
 ```bash

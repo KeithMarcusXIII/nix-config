@@ -2,7 +2,7 @@ perSystem: {
   lib,
   config,
   pkgs,
-  pkgs-unstable,
+  # pkgs-unstable,
   ...
 }: let
   # Apps to auto-start at login via macOS Login Items (System Settings → General → Login Items)
@@ -78,22 +78,6 @@ in {
     };
   };
 
-  # Autostart colima at login via LaunchAgent (brew services won't work for nix-installed colima)
-  # launchd.user.agents.colima = {
-  #   enable = true;
-  #   serviceConfig = {
-  #     Label = "com.github.colima";
-  #     ProgramArguments = [
-  #       "${pkgs-unstable.colima}/bin/colima"
-  #       "start"
-  #     ];
-  #     RunAtLoad = true;
-  #     KeepAlive = false;
-  #     StandardOutPath = "/tmp/colima.stdout.log";
-  #     StandardErrorPath = "/tmp/colima.stderr.log";
-  #   };
-  # };
-
   environment.systemPackages = with pkgs; [
     # Core CLI utilities
     ripgrep
@@ -106,11 +90,6 @@ in {
     nil # Nix language server
     alejandra # Nix formatter
 
-    # Container runtime (Colima from nixpkgs-unstable — stable nixpkgs has EOL lima)
-    pkgs-unstable.colima
-    docker
-    docker-compose
-    docker-buildx
   ];
 
   system.defaults = {

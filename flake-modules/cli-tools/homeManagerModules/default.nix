@@ -2,7 +2,7 @@ perSystem: {
   lib,
   config,
   pkgs,
-  pkgs-unstable,
+  # pkgs-unstable,
   ...
 }: {
   home.packages = with pkgs; [
@@ -13,9 +13,37 @@ perSystem: {
     fd # Modern find replacement
     tmux # Terminal multiplexer
     # pkgs-unstable.devbox #
-    pkgs-unstable.devenv #
+    devenv #
     sops # Secret editor for sops-nix
+
+    # Container tools (managed alongside colima service)
+    docker
+    docker-compose
+    docker-buildx
+
+    # MCP server for NixOS
+    mcp-nixos
   ];
+
+  # ── Colima: container runtime as a user launchd service ──────────
+  services.colima = {
+    enable = true;
+    package = pkgs.colima;
+
+    profiles.default = {
+      isActive = true;
+      isService = true;
+      setDockerHost = true;
+      settings = {
+        cpu = 4;
+        memory = 8;
+        disk = 60;
+        arch = "aarch64";
+        vmType = "vz";
+        rosetta = true;
+      };
+    };
+  };
 
   # ── Enable flags ──────────────────────────────────────────────────
   # Toggle these at a glance without digging into config details below
