@@ -5,7 +5,7 @@
   env.GREET = "devenv";
 
   # https://devenv.sh/packages/
-  packages = [ pkgs.git ];
+  packages = [ pkgs.mcp-nixos ];
 
   # https://devenv.sh/languages/
   languages.javascript = {
