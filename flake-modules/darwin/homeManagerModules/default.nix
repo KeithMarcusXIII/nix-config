@@ -15,4 +15,27 @@ perSystem: {
   nix.extraOptions = ''
     !include ${config.home.homeDirectory}/.config/nix/nix.conf.d/50-github-token.conf
   '';
+
+  # ── MCP servers (global registry) ───────────────────────────
+  # Consumed by VSCodium (enableMcpIntegration), OpenCodeCommit,
+  # or any other editor/tool that supports programs.mcp.
+  programs.mcp = {
+    enable = true;
+    servers = {
+      # NixOS MCP — query nixpkgs, NixOS options, and more
+      # https://github.com/utensils/mcp-nixos
+      nixos = {
+        command = "mcp-nixos";
+      };
+    };
+  };
+
+  # ── macOS application bundles ────────────────────────────
+  # rsync copies .app bundles from home.packages to a custom
+  # volume path (not the default ~/Applications/Home Manager Apps),
+  # matching the Homebrew cask appdir.
+  targets.darwin.copyApps = {
+    enable = true;
+    directory = "/Volumes/Macintosh Dock/Applications/Home Manager Apps";
+  };
 }

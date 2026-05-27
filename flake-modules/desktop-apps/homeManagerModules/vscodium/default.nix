@@ -5,8 +5,9 @@
   ...
 }: {
   imports = [
-    ./settings.nix
+    # ./settings.nix
     ./extensions.nix
+    ./mcp.nix
   ];
 
   programs.vscodium = {

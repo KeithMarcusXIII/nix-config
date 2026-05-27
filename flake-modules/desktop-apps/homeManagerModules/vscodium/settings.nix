@@ -11,22 +11,6 @@
     ];
     "zoo-code.deniedCommands" = [];
 
-    # ── Commit AI ────────────────────────────────────────────
-    "commit-ai.servers" = [
-      {
-        type = "openai";
-        baseURL = "https://api.deepseek.com";
-        apiKey = "sk-89282f1621234014b9a60b1f8af8ad46";
-        models = [
-          {
-            name = "deepseek-v4-flash";
-            enabled = true;
-          }
-        ];
-      }
-    ];
-    "commit-ai.reasoningEffort" = "low";
-
     # ── Git ──────────────────────────────────────────────────
     "git.autofetch" = true;
 
@@ -53,6 +37,21 @@
           };
         };
       };
+    };
+
+    "opencodecommit.backendOrder" = [
+        "custom-api"
+        "codex"
+        "opencode"
+        "claude"
+        "gemini"
+    ];
+    "opencodecommit.api.custom" = {
+        "model" = "deepseek-v4-flash";
+        "endpoint" = "https://api.deepseek.com";
+        "keyEnv" = "DEEPSEEK_API_KEY";
+        "prModel" = "deepseek-v4-pro";
+        "cheapModel" = "deepseek-v4-flash";
     };
   };
 }

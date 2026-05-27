@@ -37,6 +37,15 @@ in {
       group = "staff";
       mode = "0400";
     };
+    # Decrypts DeepSeek API key at the default sops-nix path. The key is consumed
+    # by a home-manager LaunchAgent that runs launchctl setenv on login, injecting
+    # DEEPSEEK_API_KEY into the user's launchd domain for GUI apps like VSCodium.
+    # See _bmad-output/planning-artifacts/opencodecommit-secret-injection.md
+    secrets."deepseek-api-key" = {
+      owner = config.users.users.keith.name;
+      group = "staff";
+      mode = "0400";
+    };
   };
 
   nixpkgs.config = {

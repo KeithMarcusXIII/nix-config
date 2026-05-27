@@ -7,6 +7,7 @@ perSystem: {
 }: {
   imports = [
     ./vscodium
+    ./opencodecommit
   ];
 
   home.packages = with pkgs; [
