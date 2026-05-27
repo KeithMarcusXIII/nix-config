@@ -91,17 +91,17 @@
                   sops-nix.darwinModules.sops
                   # Overlay: inject mcp-nixos into pkgs from flake input
                   # inputs is accessible from the outer outputs function scope
-                  # final.system is nix-darwin's pkgs system — no recursion
+                  # final.stdenv.hostPlatform.system is nix-darwin's pkgs system — no recursion
                   ({ config, lib, ... }: {
                     nixpkgs.overlays = [(final: prev: {
-                      mcp-nixos = inputs.mcp-nixos.packages.${final.system}.default;
+                      mcp-nixos = inputs.mcp-nixos.packages.${final.stdenv.hostPlatform.system}.default;
                     })];
                   })
                   {
                     home-manager.users.keith = {
                       # HM-level overlay (robust: works with or without useGlobalPkgs)
                       nixpkgs.overlays = [(final: prev: {
-                        mcp-nixos = inputs.mcp-nixos.packages.${final.system}.default;
+                        mcp-nixos = inputs.mcp-nixos.packages.${final.stdenv.hostPlatform.system}.default;
                       })];
                       imports = [
                         self.homeManagerModules.darwin
