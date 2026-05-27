@@ -66,6 +66,18 @@ in {
     };
   };
 
+  # Ensure nix-darwin's activate-system retries if the external nix store
+  # volume isn't mounted yet at boot. Without KeepAlive, a transient failure
+  # (exit 126) permanently prevents darwin-rebuild from being available.
+  launchd.daemons.activate-system = {
+    serviceConfig = {
+      KeepAlive = {
+        SuccessfulExit = false;
+      };
+      ThrottleInterval = 10;
+    };
+  };
+
   # Autostart colima at login via LaunchAgent (brew services won't work for nix-installed colima)
   # launchd.user.agents.colima = {
   #   enable = true;
