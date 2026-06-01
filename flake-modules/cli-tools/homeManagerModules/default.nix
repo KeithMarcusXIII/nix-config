@@ -14,6 +14,7 @@ perSystem: {
     tmux # Terminal multiplexer
     # pkgs-unstable.devbox #
     devenv #
+    # secretspec
     sops # Secret editor for sops-nix
 
     # Container tools (managed alongside colima service)
@@ -57,6 +58,7 @@ perSystem: {
   # ── Program configurations ────────────────────────────────────────
   programs = {
     direnv = {
+      silent = true; # Suppress "direnv: export +VAR ..." logging
       mise.enable = true;
     };
 
@@ -84,6 +86,27 @@ perSystem: {
       # because the TOML serializer expands nested attrsets into [parent.child] headers
       # which mise's parser doesn't support for [env.*] entries.
       globalConfig = {};
+    };
+  };
+
+  launchd.agents.bws-env = {
+    enable = true;
+    config = {
+      Label = "com.bws-env";
+      ProgramArguments = [
+        "/bin/sh"
+        "-c"
+        ''
+          keyFile="/run/secrets/bws-access-token"
+          if [ -f "$keyFile" ]; then
+            launchctl setenv BWS_ACCESS_TOKEN "$(cat "$keyFile")"
+          else
+            echo "WARNING: $keyFile not found — bitwarden secrets manager will not have API key" >&2
+            logger -t bws-env "ERROR: $keyFile not found"
+          fi
+        ''
+      ];
+      RunAtLoad = true;
     };
   };
 }

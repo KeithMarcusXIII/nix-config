@@ -46,6 +46,11 @@ in {
       group = "staff";
       mode = "0400";
     };
+    secrets."bws-access-token" = {
+      owner = config.users.users.keith.name;
+      group = "staff";
+      mode = "0400";
+    };
   };
 
   nixpkgs.config = {
@@ -165,6 +170,9 @@ in {
       "zen"
       "vscodium"
       "tabby"
+      "pearcleaner"
+      "ungoogled-chromium"
+      "folx"
     ];
   };
 

@@ -19,8 +19,9 @@ perSystem: {
   # ── MCP servers (global registry) ───────────────────────────
   # Consumed by VSCodium (enableMcpIntegration), OpenCodeCommit,
   # or any other editor/tool that supports programs.mcp.
+  programs.mcp.enable = true;
+
   programs.mcp = {
-    enable = true;
     servers = {
       # NixOS MCP — query nixpkgs, NixOS options, and more
       # https://github.com/utensils/mcp-nixos

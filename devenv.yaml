@@ -3,6 +3,9 @@ inputs:
   nixpkgs:
     # url: github:cachix/devenv-nixpkgs/rolling
     url: github:NixOS/nixpkgs/nixpkgs-unstable
+  devenv-extras:
+    url: github:KeithMarcusXIII/devenv-extras
+    flake: false
 
 # If you're using non-OSS software, you can set allow_unfree to true.
 allow_unfree: true
@@ -15,5 +18,5 @@ allow_unfree: true
 #  - "openssl-1.1.1w"
 
 # If you have more than one devenv you can merge them
-#imports:
-# - ./backend
+imports:
+  - devenv-extras/modules/mcp
