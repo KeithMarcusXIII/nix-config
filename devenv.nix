@@ -14,7 +14,7 @@ in
   }: {
     # https://devenv.sh/basics/
     env.GREET = "devenv";
-    env.SECRETSPEC_PROFILE = "development";
+    # env.SECRETSPEC_PROFILE = "development";
     # env.SECRETSPEC_PROVIDER = "devenv";
 
     # https://devenv.sh/packages/
