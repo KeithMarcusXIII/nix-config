@@ -14,13 +14,27 @@ in
   }: {
     # https://devenv.sh/basics/
     env.GREET = "devenv";
+    env.SECRETSPEC_PROFILE = "development";
+    # env.SECRETSPEC_PROVIDER = "devenv";
 
     # https://devenv.sh/packages/
     packages = with pkgs; [
       mcp-nixos
-      secretspec
       bws
       repomix
+    ] ++ [
+      # secretspec v0.11.0 — built from source to support project-level [providers]
+      (pkgs.rustPlatform.buildRustPackage {
+        pname = "secretspec";
+        version = "0.11.0";
+        src = pkgs.fetchFromGitHub {
+          owner = "cachix";
+          repo = "secretspec";
+          rev = "v0.11.0";
+          hash = "sha256-wNM4M1WmY4qn+rAS3bwV+0xyYxPj5tSCZNgzgpZzxLo=";
+        };
+        cargoHash = "sha256-+za3JfcgTHSteOAWh7PXQx30WsdA3ApBswY4ALeacJ8=";
+      })
     ];
 
     # https://devenv.sh/languages/
