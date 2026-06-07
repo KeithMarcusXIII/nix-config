@@ -5,247 +5,161 @@
 ## Prerequisites
 
 - **Nix** with flakes enabled (`nix CLI v2+`)
-- **nix-darwin** (for deployment on macOS)
-- **SSH access** to target host (for remote deployment)
-- **macOS** (aarch64-darwin or x86_64-darwin) for local build
+- **macOS** (aarch64-darwin or x86_64-darwin)
+- **direnv** + **nix-direnv** (optional, for automatic dev shell)
 
 ## Environment Setup
 
+### Automatic (direnv)
+
 ```bash
-# Clone the repository
-git clone <repo-url> nix-config
-cd nix-config
+direnv allow
+```
 
-# Enable flake support (if not already)
-mkdir -p ~/.config/nix
-echo 'experimental-features = nix-command flakes' >> ~/.config/nix/nix.conf
+This sources the dev shell from [`devenv.nix`](../devenv.nix), providing:
+- Node.js 24 + pnpm
+- Python 3 with venv
+- `nil` (Nix LSP), `alejandra` (formatter)
+- `mcp-nixos`, `secretspec`, `bws`, `repomix`
+- MCP servers: nixos, devenv, firecrawl, repomix, github
 
-# Enter dev shell (or use direnv)
+### Manual
+
+```bash
 nix develop
-# OR: direnv allow (if .envrc has 'use flake')
 ```
 
-## Development Workflow
+## Daily Workflow
 
-### 1. Make Changes
-
-Edit files in `flake-modules/darwin/` or `hosts/`:
-
-- System packages → [`flake-modules/darwin/darwinModules/default.nix`](../flake-modules/darwin/darwinModules/default.nix)
-- User packages → [`flake-modules/darwin/homeManagerModules/default.nix`](../flake-modules/darwin/homeManagerModules/default.nix)
-- Host identity → [`hosts/mac16-10.nix`](../hosts/mac16-10.nix)
-
-### 2. Format
+### Validation Before Commit
 
 ```bash
-nix fmt
-```
-
-### 3. Validate (Pre-Commit)
-
-```bash
-# Step 1: Fast check — eval, syntax, flake structure
+# Fast check: eval, syntax, flake structure
 nix flake check
 
-# Step 2: Comprehensive — build full system closure
+# Build full system closure
 nix build .#darwinConfigurations.mac16-10.system
-```
 
-> **⚠️ Critical:** `nix flake check` passing does NOT guarantee the system closure builds. Always run `nix build` of the darwinConfiguration before deploying.
-
-### 4. Preview Changes
-
-```bash
-# Dry-run to see what would change (run on dev node)
+# Dry-run to see what will change
 darwin-rebuild switch --dry-run --flake .#mac16-10
 ```
 
-### 5. Deploy
+### Applying Changes
 
 ```bash
-# Local deploy (if on target machine)
 darwin-rebuild switch --flake .#mac16-10
-
-# Remote SSH deploy
-darwin-rebuild switch --flake .#mac16-10 --target-host keith@mac16-10
 ```
 
-## Lockfile Management
+### Updating Lock File
 
 ```bash
-# Update lock after changing inputs
-nix flake lock
+# Update specific input
+nix flake lock --update-input nixpkgs
 
-# Always commit flake.lock
-git add flake.lock
+# Update all inputs
+nix flake update
 ```
 
-> **Never hand-edit `flake.lock`.**
+## Code Conventions
 
-## Code Style
+### Module Signatures
 
-- **Formatting:** 2-space indent, no tabs. `{` on same line, `};` on own line.
-- **File naming:** Entry points are `default.nix`. Packages match attr names.
-- **Module signature:** Curried two-argument form — `localFlake: { lib, config, self, inputs, ... }: { ... }`
-- **No `with pkgs;`** — declare deps explicitly in function args
-- **`callPackage`**: always with empty override — `pkgs.callPackage ./path { }`
-- **Comments:** `#` with space, above the code they describe. `# TODO:` for planned work.
+```nix
+# Entry point (every flake-module/<concern>/default.nix):
+localFlake: { lib, config, self, inputs, ... }: {
+  perSystem = { system, ... }: { ... };
+  flake = {
+    darwinModules.<name> = localFlake.moduleWithSystem (...);
+    homeManagerModules.<name> = localFlake.moduleWithSystem (...);
+  };
+}
 
-## Module Patterns
+# Implementation (darwinModules/default.nix, homeManagerModules/default.nix):
+perSystem: { lib, config, pkgs, ... }: {
+  # Config here — perSystem.config.packages.<name> for cross-module refs
+}
+```
+
+### Import Order
+
+In `flake.nix`, modules must be imported via `importApply` **before** `mkHomeManagerOutputsMerge.nix`:
+
+```nix
+imports = [
+  ./flake-modules/mkHomeManagerOutputsMerge.nix  # Must be first
+  darwin-mod
+  cli-tools-mod
+  dev-sdks-mod
+  desktop-apps-mod
+];
+```
 
 ### Adding a New Flake Module
 
-1. Create directory: `flake-modules/<name>/`
-2. Create entry: `flake-modules/<name>/default.nix` (curried 2-arg form)
-3. Optional sub-modules: `darwinModules/default.nix`, `homeManagerModules/default.nix`
-4. Import in [`flake.nix`](../flake.nix): `importApply ./flake-modules/<name> { inherit withSystem moduleWithSystem importApply; }`
-5. Add to `imports` list
+1. Create `flake-modules/<concern>/default.nix` with curried 2-arg signature
+2. Create `flake-modules/<concern>/homeManagerModules/default.nix` (or `darwinModules/`)
+3. In `flake.nix`: add `importApply` call + add to `imports` list
+4. In `flake.nix` → `home-manager.users.keith.imports`: add `self.homeManagerModules.<concern>`
 
-### Adding a New Host
+### Adding a New External Package
 
-1. Create `hosts/<hostname>.nix`
-2. Add `darwinConfigurations.<hostname>` in [`flake.nix`](../flake.nix)
-3. Ensure shared modules remain host-agnostic (use module options, not hardcoded names)
+1. Add flake input in `flake.nix` (with `inputs.nixpkgs.follows = "nixpkgs"` if it uses nixpkgs)
+2. Add `nixpkgs.overlays` block in the darwinConfiguration module list (and HM if needed)
+3. Use as `pkgs.<name>` — no parameter declarations required
 
-### `nix.settings` Split Pattern
+See [`docs/decisions/mcp-nixos-overlay.md`](./decisions/mcp-nixos-overlay.md) for the full pattern.
 
-**Rule**: Universal daemon settings go in the shared darwin module. Host-specific overrides go in the host file.
-
-- Shared (in [`darwinModules/default.nix`](../flake-modules/darwin/darwinModules/default.nix)):
-  ```nix
-  nix.settings = {
-    build-users-group = "nixbld";
-    experimental-features = [ "flakes" "nix-command" ];
-    max-jobs = "auto";
-  };
-  ```
-- Host-specific (in [`hosts/mac16-10.nix`](../hosts/mac16-10.nix)):
-  ```nix
-  nix.settings.trusted-users = [ "root" "@admin" ];
-  ```
-- The nix module system merges both at build time.
-
-### Using `pkgs-unstable` for Bleeding-Edge Packages
-
-When you need the latest version of a package from `nixpkgs-unstable` instead of the stable `nixos-25.11`:
-
-1. Add `{ pkgs-unstable, ... }` to the module's function signature.
-2. Reference packages via `pkgs-unstable.<name>` instead of `pkgs.<name>`.
-
-```nix
-# darwinModules/default.nix — mix stable + unstable packages
-perSystem:
-{ lib, config, pkgs, pkgs-unstable, ... }:
-{
-  environment.systemPackages = with pkgs; [
-    git            # from stable — no need for latest
-    ripgrep
-  ] ++ (with pkgs-unstable; [
-    qemu           # bleeding-edge from unstable
-    neovim
-  ]);
-}
-```
-
-`pkgs-unstable` is available in:
-- `perSystem` modules (via `_module.args`)
-- nix-darwin modules (via `specialArgs`)
-- home-manager modules (via `home-manager.extraSpecialArgs`)
-
-Any module that doesn't add `pkgs-unstable` to its signature simply ignores it — opt-in only.
-
-### Using External Flake Packages via `nixpkgs.overlays`
-
-External flake packages (not from nixpkgs) are made available as `pkgs.<name>` using `nixpkgs.overlays` in the darwin (and optionally home-manager) module list in [`flake.nix`](../flake.nix):
-
-```nix
-# Inside darwinConfigurations.modules — apply overlay to nix-darwin's pkgs
-({ config, lib, ... }: {
-  nixpkgs.overlays = [(final: prev: {
-    mcp-nixos = inputs.mcp-nixos.packages.${final.system}.default;
-  })];
-})
-```
-
-When `home-manager.useGlobalPkgs = false`, apply the same overlay inside the HM user config:
-
-```nix
-{
-  home-manager.users.keith = {
-    nixpkgs.overlays = [(final: prev: {
-      mcp-nixos = inputs.mcp-nixos.packages.${final.system}.default;
-    })];
-    # ... imports, home.stateVersion
-  };
-}
-```
-
-**How it reaches modules:** Once in `nixpkgs.overlays`, the package is available as `pkgs.<name>` everywhere — darwin modules, home-manager modules (when `useGlobalPkgs = true`), and any other code that uses that nixpkgs instance:
-
-```nix
-perSystem: { lib, config, pkgs, ... }: {
-  home.packages = with pkgs; [
-    mcp-nixos    # ← resolves via the overlay, no parameter declaration needed
-  ];
-}
-```
-
-**Why this works (and previous approaches failed):**
-
-| Approach | Result | Root Cause |
-|----------|--------|------------|
-| `import nixpkgs { overlays = [...]; }` in `_module.args.pkgs` | ❌ Recursion | `prev.system` references nixpkgs being built |
-| `pkgs.extend` in `_module.args.pkgs` | ❌ Recursion | flake-parts depends on `_module.args.pkgs` internally |
-| `pkgs // { ... }` in `_module.args.pkgs` | ❌ Recursion | Same internal dependency — mechanism doesn't matter |
-| `nixpkgs.overlays` in darwin/HM module list | ✅ Works | Applied during pkgs construction, not via flake-parts internals |
-
-For the full rationale and thought process, see the dedicated decision record:
-→ **[Architecture Decision: External Flake Packages via `nixpkgs.overlays`](../docs/decisions/mcp-nixos-overlay.md)**
-
-## Testing
+### Formatting
 
 ```bash
-# Run all checks
-nix flake check
-
-# Verify output structure
-nix flake show
-
-# Build specific configuration
-nix build .#darwinConfigurations.mac16-10.system
+alejandra .  # Format all nix files
 ```
 
-## Adding Applications
+The dev shell includes `alejandra` — it's available without installation.
 
-For the complete methodology on discovering, evaluating, and adding applications to your nix flake — including package research (nixpkgs, brew, host scan, external flakes), categorization (system vs user vs cask), implementation patterns, and a three-layer validation check — see the dedicated guide:
+## Adding New Applications
 
-→ **[Adding Applications Guide](./adding-applications-guide.md)**
+See [`adding-applications-guide.md`](./adding-applications-guide.md) for the full methodology:
+1. Research (homebrew cask vs nixpkgs)
+2. Categorize (system vs user, stable vs unstable)
+3. Implement (add to appropriate module)
+4. Validate (`nix flake check` + `darwin-rebuild dry-run`)
 
-### Quick Reference: Key Commands
+## Module Loading Chain Reference
 
-| Task | Command |
-|------|---------|
-| Search nixpkgs | `nix search nixpkgs <term>` |
-| Search brew | `brew search <term>` |
-| List my brew packages | `brew leaves` |
-| List my brew casks | `brew list --cask` |
-| Inspect external flake | `nix flake show github:owner/repo` |
-| Flake metadata | `nix flake metadata github:owner/repo` |
-| Validate flake structure | `nix flake check` |
-| Resolve system packages | `nix eval .#darwinConfigurations.<host>.config.environment.systemPackages ...` |
-| Resolve user packages | `nix eval .#darwinConfigurations.<host>.config.home-manager.users.<user>.home.packages ...` |
-| Full build check | `nix build .#darwinConfigurations.<host>.system` |
-| Deploy | `darwin-rebuild switch --flake .#<host>` |
+```
+flake.nix
+  └─ importApply ./flake-modules/darwin
+       ├─ darwinModules.default → system packages, homebrew, sops-nix, launchd
+       └─ homeManagerModules.darwin → programs.mcp, copyApps
+  └─ importApply ./flake-modules/cli-tools
+       └─ homeManagerModules.cli-tools → CLI tools, colima, direnv, zsh, git, mise
+  └─ importApply ./flake-modules/dev-sdks
+       └─ homeManagerModules.dev-sdks → uv, apktool, scrcpy
+  └─ importApply ./flake-modules/desktop-apps
+       └─ homeManagerModules.desktop-apps → IINA, VSCodium, OpenCodeCommit
+```
+
+## Debugging
+
+### Flake Evaluation Errors
+
+```bash
+# Show what nix evaluates
+nix eval .#darwinConfigurations.mac16-10.config.system.stateVersion
+
+# Trace evaluation (for infinite recursion)
+nix eval --show-trace .#darwinConfigurations.mac16-10.pkgs.mcp-nixos.name
+```
+
+### Nix Daemon Issues
+
+See [`docs/troubleshooting/nix-daemon-stale-socket.md`](./troubleshooting/nix-daemon-stale-socket.md)
+
+### darwin-rebuild Missing After Reboot
+
+See [`docs/troubleshooting/darwin-rebuild-disappears-after-reboot.md`](./troubleshooting/darwin-rebuild-disappears-after-reboot.md)
 
 ---
 
-## Git Conventions
-
-- **Branch naming:** kebab-case
-- **Commits:** imperative mood
-- **Pre-commit:** `nix fmt` → `nix flake check` → `nix build`
-- **Always commit `flake.lock`**
-
----
-
-_Generated: 2026-05-17 | Scan Level: Deep_
+_Generated: 2026-06-06 | Scan Level: Deep_

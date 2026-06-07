@@ -9,6 +9,9 @@
 1. **Flake entry point** ([`flake.nix`](../flake.nix)) — defines inputs, systems, and flake-level outputs
 2. **Flake modules** ([`flake-modules/`](../flake-modules/)) — encapsulated, self-referencing modules with curried signatures
 3. **Host configurations** ([`hosts/`](../hosts/)) — per-machine nix-darwin system modules
+4. **Secrets** ([`secrets/`](../secrets/)) — sops-nix encrypted secrets with LaunchAgent env injection
+
+**Reference patterns:** Curated digests in [`references/`](../references/) — no external repo vendored.
 
 ## Architecture Pattern
 
@@ -17,7 +20,8 @@
 ```
 flake.nix (orchestrator)
   ├─ imports: [ flake-modules/darwin (via importApply) ]
-  │    └─ flake.darwinModules.default (via moduleWithSystem)
+  │    ├─ flake.darwinModules.default (via moduleWithSystem)
+  │    └─ flake.homeManagerModules.darwin (via moduleWithSystem)
   │
   ├─ imports: [ flake-modules/cli-tools (via importApply) ]
   │    └─ flake.homeManagerModules.cli-tools (via moduleWithSystem)
@@ -30,6 +34,10 @@ flake.nix (orchestrator)
   │
   └─ consumed by darwinConfigurations.mac16-10
        ├─ self.darwinModules.default (system-level)
+       ├─ home-manager.darwinModules.home-manager
+       ├─ sops-nix.darwinModules.sops
+       ├─ nixpkgs.overlays → mcp-nixos (from flake input)
+       ├─ self.homeManagerModules.darwin
        ├─ self.homeManagerModules.cli-tools
        ├─ self.homeManagerModules.dev-sdks
        └─ self.homeManagerModules.desktop-apps
@@ -37,7 +45,7 @@ flake.nix (orchestrator)
 
 ### Module Signature Convention (Curried Two-Argument Form)
 
-Every flake module follows this signature, identical to the reference example:
+Every flake module follows this signature:
 
 ```nix
 # First argument: localFlake — the module's own flake context
@@ -61,223 +69,235 @@ localFlake:
 | `localFlake.moduleWithSystem` | Wrapping sub-module outputs | Exposing `darwinModules`, `homeManagerModules` |
 | `localFlake.importApply` | Loading sub-module files | Importing `./darwinModules`, `./homeManagerModules` |
 | `self.darwinModules.default` | Final user flake output | Referencing the `darwin` module's darwin output from `flake.nix` |
-| `self.homeManagerModules.cli-tools` | Final user flake output | Named HM output from `cli-tools` module |
-| `self.homeManagerModules.dev-sdks` | Final user flake output | Named HM output from `dev-sdks` module |
-| `self.homeManagerModules.desktop-apps` | Final user flake output | Named HM output from `desktop-apps` module |
+| `self.homeManagerModules.*` | Final user flake output | Named HM outputs from each concern module |
 
-**Why this matters:** In [`flake.nix`](../flake.nix), `self.darwinModules.default` refers to the output defined in [`flake-modules/darwin/default.nix`](../flake-modules/darwin/default.nix), while `self.homeManagerModules.cli-tools` (and `dev-sdks`, `desktop-apps`) each come from their respective flake modules. Named outputs replace the single `self.homeManagerModules.default` — each concern is now independently composable.
+### Module Implementation Signature
 
-## Module Structure: Deep Dive
+Implementation modules use a single-argument curried form:
 
-### Reference Example (`writing-flake-modules/example-3-organizing-code`)
-
-```
-flake-modules/foo/
-├── default.nix              # Entry: curried 2-arg, perSystem packages + checks, flake outputs
-├── pkgs/
-│   └── foo.nix              # callPackage derivation ({ hello }: hello)
-├── nixosModules/
-│   └── default.nix          # NixOS systemd service using perSystem.config.packages.foo
-└── homeManagerModules/
-    └── default.nix          # HM user systemd service using perSystem.config.packages.foo
+```nix
+perSystem: { lib, config, pkgs, ... }: {
+  # Module implementation — perSystem is already bound to a specific system
+}
 ```
 
-### This Project (`nix-config`)
+`perSystem` provides access to `perSystem.config.packages.*` for cross-module package references.
+
+## Module Structure
 
 ```
 flake-modules/
-├── darwin/                      # 🍎 macOS system configuration
-│   ├── default.nix              # Entry: curried 2-arg, perSystem checks, flake darwinModules.default
-│   └── darwinModules/
-│       └── default.nix          # System packages (git, colima) + homebrew + macOS defaults
-├── cli-tools/                   # 🔧 User-level CLI tools
-│   ├── default.nix              # Entry: curried 2-arg, exports homeManagerModules.cli-tools
+├── mkHomeManagerOutputsMerge.nix       # Flake module declaring mergeable homeManagerModules output
+├── darwin/                             # 🍎 macOS system configuration
+│   ├── default.nix                     # Entry: curried 2-arg, exports darwinModules + homeManagerModules
+│   ├── darwinModules/
+│   │   └── default.nix                 # System: nix.settings, homebrew, sops-nix, launchd, login items
 │   └── homeManagerModules/
-│       └── default.nix          # bat, btop, delta, eza, fd, direnv, nix-direnv, tmux
-├── dev-sdks/                    # 📦 Development SDKs
-│   ├── default.nix              # Entry: curried 2-arg, exports homeManagerModules.dev-sdks
+│       └── default.nix                 # User: nix extraOptions, programs.mcp, copyApps directory
+├── cli-tools/                          # 🔧 CLI tools + container runtime
+│   ├── default.nix                     # Entry: exports homeManagerModules.cli-tools
 │   └── homeManagerModules/
-│       └── default.nix          # uv, apktool, payload-dumper-go, scrcpy
-└── desktop-apps/                # 🖥️ GUI & specialized apps
-    ├── default.nix              # Entry: curried 2-arg, exports homeManagerModules.desktop-apps
+│       └── default.nix                 # bat, btop, docker, colima service, direnv, zsh, git, mise
+├── dev-sdks/                           # 📦 Development SDKs
+│   ├── default.nix                     # Entry: exports homeManagerModules.dev-sdks
+│   └── homeManagerModules/
+│       └── default.nix                 # uv, apktool, payload-dumper-go, scrcpy
+└── desktop-apps/                      # 🖥 Desktop applications
+    ├── default.nix                     # Entry: exports homeManagerModules.desktop-apps
     └── homeManagerModules/
-        └── default.nix          # iina, moonlight-qt, wechat
+        ├── default.nix                 # iina, moonlight-qt, wechat; imports vscodium + opencodecommit
+        ├── vscodium/
+        │   ├── default.nix             # programs.vscodium enable
+        │   ├── extensions.nix          # Extension list
+        │   └── mcp.nix                 # MCP server integration
+        └── opencodecommit/
+            └── default.nix             # LaunchAgent: DEEPSEEK_API_KEY env injection
 ```
-
-### Key Differences from Reference
-
-| Aspect | Reference (`foo`) | This Project (`nix-config`) |
-|--------|-------------------|-----------------------------|
-| **System target** | NixOS (Linux) | nix-darwin (macOS) |
-| **Module outputs** | `nixosModules.foo`, `homeManagerModules.foo` | `darwinModules.default` (system) + 3 named HM outputs |
-| **Module count** | 1 module | 4 concern-based modules |
-| **Packages** | `pkgs/foo.nix` with `callPackage` | No custom packages (uses nixpkgs directly) |
-| **Checks** | `runNixOSTest` (VM tests) | `pkgs.runCommand` (touch $out) — macOS can't run NixOS VMs |
-| **Cross-module ref** | `perSystem.config.packages.foo` | `perSystem@{ config }` (destructured but unused currently) |
-| **Sub-module args** | `perSystem: { lib, ... }:` | `perSystem: { lib, config, pkgs, ... }:` (receives full darwin module context) |
-
-## Data Flow: Complete Module Loading Chain
-
-```
-flake.nix
-  │
-  ├─ inputs
-  │   ├─ flake-parts          → flake-parts.lib.mkFlake
-  │   ├─ nixpkgs              → nixos-25.11 (stable — follows to nix-darwin, home-manager)
-  │   ├─ nixpkgs-unstable     → standalone input (NO follows — bleeding-edge packages only)
-  │   ├─ nix-darwin           → nix-darwin-25.11 (stable — follows nixpkgs)
-  │   └─ home-manager         → release-25.11 (stable — follows nixpkgs)
-  │
-  ├─ mkFlake { inherit inputs; } ({ withSystem, moduleWithSystem, flake-parts-lib, ... }:
-  │   let
-  │     inherit (flake-parts-lib) importApply;
-  │     darwin-mod      = importApply ./flake-modules/darwin        { ... };
-  │     cli-tools-mod   = importApply ./flake-modules/cli-tools     { ... };
-  │     dev-sdks-mod    = importApply ./flake-modules/dev-sdks      { ... };
-  │     desktop-apps-mod = importApply ./flake-modules/desktop-apps { ... };
-  │   in {
-  │     imports = [ darwin-mod cli-tools-mod dev-sdks-mod desktop-apps-mod ];
-  │     systems = ["x86_64-linux" "aarch64-linux" "aarch64-darwin" "x86_64-darwin"];
-  │
-  │     perSystem = { system, pkgs, ... }: {
-  │       # pkgs-unstable: bleeding-edge packages (opt-in by modules)
-  │       _module.args.pkgs-unstable = import inputs.nixpkgs-unstable {
-  │         inherit system;
-  │         config.allowUnfree = true;
-  │       };
-  │       devShells.default = pkgs.mkShell {
-  │         packages = [ pkgs.nil pkgs.alejandra ];
-  │       };
-  │     };
-  │
-  │     flake.darwinConfigurations.mac16-10 = withSystem "aarch64-darwin"
-  │       ({ pkgs-unstable, ... }:
-  │         nix-darwin.lib.darwinSystem {
-  │           system = "aarch64-darwin";
-  │           specialArgs = { inherit pkgs-unstable; };  # → darwin modules
-  │           modules = [
-  │             ./hosts/mac16-10.nix              ←── Host identity (trusted-users here)
-  │             self.darwinModules.default         ←── System-level (nix.settings universal defaults)
-  │             home-manager.darwinModules.home-manager
-  │             {
-  │               home-manager.users.keith = {
-  │                 imports = [
-  │                   self.homeManagerModules.cli-tools    ←── CLI tools
-  │                   self.homeManagerModules.dev-sdks     ←── Dev SDKs
-  │                   self.homeManagerModules.desktop-apps ←── Desktop apps
-  │                 ];
-  │                 home.stateVersion = "25.11";
-  │               };
-  │               home-manager.useGlobalPkgs = true;
-  │               home-manager.useUserPackages = true;
-  │               home-manager.extraSpecialArgs = { inherit pkgs-unstable; };  # → HM modules
-  │             }
-  │           ];
-  │         }
-  │       );
-  │   }
-  │ )
-  │
-  ├─ darwin-mod resolves to flake-modules/darwin/default.nix:
-  │    localFlake: { lib, config, self, inputs, ... }:
-  │    {
-  │      perSystem = { system, ... }: {
-  │        checks.darwin-module-check = ...;
-  │      };
-  │      flake.darwinModules.default = localFlake.moduleWithSystem (
-  │        perSystem@{ config }: localFlake.importApply ./darwinModules perSystem
-  │      );
-  │    }
-  │
-  ├─ cli-tools-mod resolves to flake-modules/cli-tools/default.nix:
-  │    localFlake: { lib, config, self, inputs, ... }:
-  │    {
-  │      flake.homeManagerModules.cli-tools = localFlake.moduleWithSystem (
-  │        perSystem@{ config }: localFlake.importApply ./homeManagerModules perSystem
-  │      );
-  │    }
-  │
-  ├─ dev-sdks-mod resolves to flake-modules/dev-sdks/default.nix:
-  │    localFlake: { lib, config, self, inputs, ... }:
-  │    {
-  │      flake.homeManagerModules.dev-sdks = localFlake.moduleWithSystem (
-  │        perSystem@{ config }: localFlake.importApply ./homeManagerModules perSystem
-  │      );
-  │    }
-  │
-  └─ desktop-apps-mod resolves to flake-modules/desktop-apps/default.nix:
-       localFlake: { lib, config, self, inputs, ... }:
-       {
-         flake.homeManagerModules.desktop-apps = localFlake.moduleWithSystem (
-           perSystem@{ config }: localFlake.importApply ./homeManagerModules perSystem
-         );
-       }
-```
-
-## Sub-Module Signature Patterns
-
-### darwinModules/default.nix (System-Level)
-
-```nix
-perSystem:                    # ← Injected by moduleWithSystem wrapper
-{ lib, config, pkgs, ... }:   # ← Standard nix-darwin module arguments
-{
-  environment.systemPackages = [ ... ];   # System-wide packages
-  homebrew = { ... };                     # Homebrew integration
-}
-```
-
-- `perSystem` gives access to `perSystem.config` for cross-module package references
-- `config` is the nix-darwin system configuration
-- `pkgs` is the nixpkgs instance for the target system
-- `pkgs-unstable` is available via `specialArgs` — add to signature to access bleeding-edge packages (e.g., `{ pkgs-unstable, ... }:`)
-
-### homeManagerModules (User-Level — Three Named Modules)
-
-Each user-level module follows the same pattern. They differ only in content:
-
-```nix
-perSystem:                    # ← Injected by moduleWithSystem wrapper
-{ lib, config, pkgs, ... }:   # ← Standard home-manager module arguments
-{
-  home.packages = [ ... ];    # User-specific packages
-}
-```
-
-- `config` here is home-manager's config, NOT darwin system config
-- `pkgs` is the nixpkgs instance (same as system level, follows nixpkgs input)
-- They are imported by name: `[self.homeManagerModules.cli-tools, self.homeManagerModules.dev-sdks, self.homeManagerModules.desktop-apps]`
-
-## Technology Architecture
-
-| Layer | Technology | Role | Key Function |
-|-------|-----------|------|-------------|
-| Orchestration | `flake-parts.lib.mkFlake` | Module composition, system declaration | `mkFlake { inherit inputs; }` |
-| Module Loading | `flake-parts-lib.importApply` | Import + apply local flake modules with args | `importApply ./path { inherit withSystem moduleWithSystem importApply; }` |
-| System Context | `localFlake.moduleWithSystem` | Wrap sub-module outputs with perSystem access | `localFlake.moduleWithSystem (perSystem: ...)` |
-| Per-System Build | `localFlake.withSystem` | Evaluate derivation for specific system | `localFlake.withSystem system ({ pkgs, ... }: ...)` |
-| Project DevShell | `pkgs.mkShell` | Workspace tools (nil, alejandra) via nix-direnv | `.envrc`: `use flake` |
-| macOS System | `nix-darwin.lib.darwinSystem` | macOS system configuration builder | `darwinSystem { system, modules }` |
-| User Config | `home-manager.darwinModules.home-manager` | User environment management | `home-manager.users.<name>.imports` |
-| Package Source (Stable) | `nixpkgs` (nixos-25.11) | System infrastructure (followed by nix-darwin + home-manager) | Stable, predictable, no breakage |
-| Framework (darwin) | `nix-darwin` (master) | macOS system module system (launchd, defaults, nix settings) | Rolling — latest module options |
-| Framework (user) | `home-manager` (master) | User environment module system (services, programs) | Rolling — latest module options like `services.colima` |
-| Package Source (Unstable) | `nixpkgs-unstable` (nixpkgs-unstable) | Bleeding-edge user packages (standalone, no follows) | Opt-in per module via `_module.args.pkgs-unstable` |
-| Daemon Config | `nix.settings` | nix-daemon configuration | Universal defaults in darwin module, host overrides in host file |
 
 ## Design Principles
 
-1. **Modularity by concern**: Each flake module is self-contained and named by concern (`darwin`, `cli-tools`, `dev-sdks`, `desktop-apps`)
-2. **Host agnosticism**: Shared modules never reference host names — host config is injected at the `darwinConfigurations` level
-3. **Explicit over implicit**: All args declared explicitly; no `with pkgs;`; empty override sets on `callPackage`
-4. **Validation-first**: `nix flake check` → `nix build` → deploy pipeline prevents broken configurations
-5. **`localFlake`/`self` separation**: Internal module references use `localFlake`; cross-module/flake-level references use `self`
-6. **Workspace DX**: `nix-direnv` + `.envrc` provides instant devShell on `cd` into the repository
-7. **macOS-native testing**: `runNixOSTest` is unavailable; use `pkgs.runCommand` for perSystem checks and `nix build .#darwinConfigurations.<host>.system` for integration validation
-8. **Rolling frameworks + stable packages**: `nix-darwin` and `home-manager` track `master` for latest module definitions; `nixpkgs` stays on `nixos-25.11` for predictable system packages. `nixpkgs-unstable` is a dedicated input for bleeding-edge packages — opt-in per module via `pkgs-unstable`
-9. **`nix.settings` split**: Universal daemon settings in shared `darwinModules/default.nix`; host-specific overrides in `hosts/<hostname>.nix` — nix module system merges at build time
-10. **Diagnostics-first derivation**: Run `nix show-config` on target to capture actual resolved config before codifying `nix.settings`; validate assumptions with targeted commands (e.g., `dseditgroup`, `groups`)
+1. **Modular separation by concern**: `darwin`, `cli-tools`, `dev-sdks`, `desktop-apps` — each independent and importable.
+
+2. **Curried two-argument module signatures**: `localFlake: { ... }: { ... }` — enables `importApply` with `withSystem`/`moduleWithSystem` without global state.
+
+3. **`mkHomeManagerOutputsMerge.nix`**: Enables multiple modules to contribute to `homeManagerModules` without merge conflicts. Adapted from `writing-flake-modules/example-2`.
+
+4. **Per-system isolation**: `perSystem` computations are lazy and system-scoped — a module's packages are only built for the system that needs them.
+
+5. **`_file` attribute on module outputs**: Every `homeManagerModules` entry carries `_file = "...#homeManagerModules.<name>"` for precise error location reporting.
+
+6. **`nixpkgs.overlays` for external packages**: External flake inputs (like `mcp-nixos`) are injected via `nixpkgs.overlays` on nix-darwin and home-manager — not via `specialArgs` threading. This pattern avoids the infinite recursion trap of `_module.args.pkgs` and the verbosity of 3-layer argument threading. See [`docs/decisions/mcp-nixos-overlay.md`](./decisions/mcp-nixos-overlay.md).
+
+7. **sops-nix for secrets**: Age-encrypted secrets with LaunchAgent-based env var injection for GUI apps. Secrets are decrypted at `darwin-rebuild switch` time and injected into launchd at login.
+
+8. **Rolling frameworks + stable packages**: `nix-darwin` and `home-manager` track `master` for latest module definitions; `nixpkgs` stays on `nixpkgs-unstable` for predictable system packages.
+
+9. **Declarative container runtime**: `services.colima` manages colima as a user launchd service with declarative profile configuration.
+
+10. **Reference digests, not vendored repos**: Curated pattern references in `references/` (repomix digests) replace the previous vendored `writing-flake-modules/` repository.
+
+## Data Flow
+
+```
+inputs (flake inputs)
+  ├── nixpkgs (nixpkgs-unstable) ──► pkgs (all modules)
+  ├── nix-darwin (master) ──► darwinSystem
+  ├── home-manager (master) ──► home-manager.users.keith
+  ├── sops-nix ──► darwinModules.sops → decrypted secrets
+  ├── mcp-nixos ──► nixpkgs.overlays → pkgs.mcp-nixos
+  ├── flake-parts ──► mkFlake, importApply, moduleWithSystem
+  └── bluebuild-cli ──► (not currently consumed)
+
+module outputs:
+  self.darwinModules.default ──► darwinConfigurations.mac16-10.modules
+  self.homeManagerModules.* ──► home-manager.users.keith.imports
+```
+
+## Key Patterns (Current)
+
+### Pattern: External Flake Package via `nixpkgs.overlays`
+
+```nix
+# In flake.nix — inside the darwinConfiguration module list:
+({ config, lib, ... }: {
+  nixpkgs.overlays = [(final: prev: {
+    mcp-nixos = inputs.mcp-nixos.packages.${final.stdenv.hostPlatform.system}.default;
+  })];
+})
+
+# Same overlay duplicated in home-manager.users.keith for robustness
+```
+
+**Why this works:** `inputs` is captured from the outer `outputs` function scope. `final.stdenv.hostPlatform.system` is the target nixpkgs system — no circular dependency. No `specialArgs` threading needed.
+
+### Pattern: sops-nix Secret → LaunchAgent Env Injection
+
+```nix
+# 1. darwinModules: sops-nix decrypts the secret to /run/secrets/<name>
+sops.secrets."deepseek-api-key" = {
+  owner = config.users.users.keith.name;
+  group = "staff";
+  mode = "0400";
+};
+
+# 2. homeManagerModules: LaunchAgent reads the decrypted file at login
+launchd.agents.opencodecommit-env = {
+  enable = true;
+  config = {
+    ProgramArguments = ["/bin/sh" "-c" ''
+      keyFile="/run/secrets/deepseek-api-key"
+      if [ -f "$keyFile" ]; then
+        launchctl setenv DEEPSEEK_API_KEY "$(cat "$keyFile")"
+      fi
+    ''];
+    RunAtLoad = true;
+  };
+};
+```
+
+### Pattern: Declarative colima Service
+
+```nix
+services.colima = {
+  enable = true;
+  package = pkgs.colima;
+  profiles.default = {
+    isActive = true;
+    isService = true;
+    setDockerHost = true;
+    settings = { cpu = 4; memory = 8; disk = 60; arch = "aarch64"; vmType = "vz"; rosetta = true; };
+  };
+};
+```
+
+### Pattern: launchd KeepAlive for Boot-Time Race
+
+```nix
+launchd.daemons.activate-system = {
+  serviceConfig = {
+    KeepAlive = { SuccessfulExit = false; };
+    ThrottleInterval = 10;
+  };
+};
+```
+
+### Pattern: Global MCP Server Registry
+
+```nix
+programs.mcp.enable = true;
+programs.mcp.servers.nixos = { command = "mcp-nixos"; };
+```
+
+### Pattern: Custom macOS Application Bundle Directory
+
+```nix
+targets.darwin.copyApps = {
+  enable = true;
+  directory = "/Volumes/Macintosh Dock/Applications/Home Manager Apps";
+};
+```
+
+## Reference Pattern Provenance
+
+Each core architecture pattern in this project is sampled from a specific reference example in the digest collection. This section maps project patterns back to their canonical sources so that agents and developers can trace a pattern to its origin for deeper understanding.
+
+### Digest: `references/flake-parts-examples.md`
+
+**Source:** [VTimofeenko/writing-flake-modules](https://github.com/VTimofeenko/writing-flake-modules)
+
+| Project Pattern | Derived From | How It's Used |
+|---|---|---|
+| **Curried 2-arg module signature** (`localFlake: { ... }: { ... }`) | Example 3: `flake-modules/foo/default.nix` | Every `flake-modules/<concern>/default.nix` — the core module entry pattern |
+| **`importApply` wiring in `flake.nix`** | Example 3: `flake.nix` (lines 478-495) | Each module imported via `importApply ./flake-modules/<concern> { inherit withSystem moduleWithSystem importApply; }` |
+| **`moduleWithSystem` for darwin/HM outputs** | Example 3: `flake.nix` (lines 493-499) | `localFlake.moduleWithSystem (perSystem @ {config}: localFlake.importApply ./darwinModules perSystem)` |
+| **Single-arg implementation signature** (`perSystem: { ... }: { ... }`) | Example 3: `nixosModules/default.nix`, `homeManagerModules/default.nix` | `perSystem.config.packages.<name>` for cross-module package references |
+| **Composable `homeManagerModules` merge** | Example 2: `mkHomeManagerOutputsMerge.nix` | [`mkHomeManagerOutputsMerge.nix`](../flake-modules/mkHomeManagerOutputsMerge.nix) — adapted with `lazyAttrsOf` + `_file` attribute |
+| **`_file` attribute on module outputs** | Example 2: `mkHomeManagerOutputsMerge.nix` (line 371) | `_file = "toString moduleLocation#homeManagerModules.<name>"` for precise error locations |
+
+### Digest: `references/flake-parts-writing-custom-flake-modules.md`
+
+**Source:** [vtimofeenko.com blog post](https://vtimofeenko.com/posts/flake-parts-writing-custom-flake-modules/)
+
+| Concept | Blog Section | Relevance |
+|---|---|---|
+| **`importApply` as the binding mechanism** | "The module" section — explains how provider flake args are bound before consumer flake args | Explains why `localFlake` comes before `{ lib, config, self, inputs, ... }` |
+| **`moduleWithSystem` for per-system module output** | "Writing a NixOS module" section — introduces the API that pulls per-system attrs into modules | The mechanism behind `flake.darwinModules.default` and `flake.homeManagerModules.<name>` |
+| **Why `homeManagerModules` needs explicit merge** | "Composable homeManagerModules" section — explains the `nixosModules` vs `homeManagerModules` asymmetry | The reason `mkHomeManagerOutputsMerge.nix` exists |
+| **Scaling to multiple flake-modules** | "Scaling to multiple flake-modules" section — confirms the pattern works for N+ modules | Validates this project's 4-module architecture |
+
+### Patterns NOT Derived from References
+
+These patterns are project-specific inventions, not sampled from reference digests:
+
+| Pattern | Origin |
+|---|---|
+| **`nixpkgs.overlays` for external packages** | This project — documented in [`docs/decisions/mcp-nixos-overlay.md`](./decisions/mcp-nixos-overlay.md) |
+| **sops-nix + LaunchAgent env injection** | This project — see `opencodecommit/default.nix` |
+| **`services.colima` declarative container runtime** | home-manager `master` module (the reason for the framework upgrade) |
+| **`launchd` KeepAlive for boot-time resilience** | This project — see [`plans/darwin-rebuild-persistence-plan.md`](../plans/darwin-rebuild-persistence-plan.md) |
+| **`programs.mcp` global MCP registry** | home-manager ecosystem |
+
+### How to Use Reference Digests
+
+1. **When designing a new flake module:** Start with Example 3's `default.nix` pattern — curried 2-arg, `moduleWithSystem` wrapping, `importApply` for sub-modules.
+2. **When adding a second module that declares the same output type:** Check that `mkHomeManagerOutputsMerge.nix` is imported first (Example 2).
+3. **When creating a module that needs provider-specific args:** Use Example 1's `importApply` with extra arguments pattern.
+4. **When unsure about the "why":** Read the blog post digest — it explains the reasoning behind `importApply`, `moduleWithSystem`, and why the curried form exists.
+
+## Technology Architecture
+
+| Component | Source | Purpose |
+|-----------|--------|---------|
+| `flake-parts` | `github:hercules-ci/flake-parts` | Flake modularization framework |
+| `nixpkgs` | `github:NixOS/nixpkgs/nixpkgs-unstable` | Package collection |
+| `nix-darwin` | `github:nix-darwin/nix-darwin/master` | macOS system configuration |
+| `home-manager` | `github:nix-community/home-manager/master` | User environment configuration |
+| `sops-nix` | `github:Mic92/sops-nix` | Age-encrypted secret management |
+| `mcp-nixos` | `github:utensils/mcp-nixos` | NixOS/nixpkgs MCP server (via overlays) |
+| `devenv` | devenv.sh | Dev environment with MCP servers |
+| `alejandra` | nixpkgs | Nix formatter |
+| `nil` | nixpkgs | Nix language server |
 
 ---
 
-_Generated: 2026-05-17 | Scan Level: Deep_
+_Generated: 2026-06-06 | Scan Level: Deep_

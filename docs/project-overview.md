@@ -1,68 +1,82 @@
 # Project Overview: nix-config
 
-**macOS system configuration via nix-darwin + flake-parts**
-
 ---
 
-## Executive Summary
+## Summary
 
-`nix-config` is a declarative macOS system configuration repository built on the Nix ecosystem. It uses `flake-parts` for modular flake composition, `nix-darwin` for macOS system management, and `home-manager` for user-level configuration. The project follows the `example-3-organizing-code` pattern from `writing-flake-modules` for organizing flake modules, with concern-based module separation.
+`nix-config` is a macOS system configuration managed declaratively through Nix flakes. It uses `flake-parts` for modular composition and `nix-darwin` + `home-manager` for system and user environment management.
 
-## Repository Structure
+- **Type:** Monolith (single flake)
+- **Primary Language:** Nix (flakes)
+- **Architecture:** flake-parts modular composition (example-3-organizing-code pattern)
+- **Target:** macOS aarch64-darwin, host `mac16-10`
+- **Deploy Command:** `darwin-rebuild switch --flake .#mac16-10`
 
-- **Type:** Monolith
-- **Primary Language:** Nix
-- **Architecture:** Concern-based flake-parts modules with host-specific configurations
+## Tech Stack
 
-## Tech Stack Summary
-
-| Category | Technology | Version/Pin |
-|----------|-----------|-------------|
-| Build System | Nix (flakes) | nix CLI v2+ |
-| Module System | flake-parts | github:hercules-ci/flake-parts |
-| System Config | nix-darwin | github:nix-darwin/nix-darwin/master |
-| User Config | home-manager | github:nix-community/home-manager |
-| Package Source | nixpkgs | nixpkgs-unstable |
-| Workspace DX | nix-direnv | via home-manager + .envrc |
-| Deployment Target | macOS (aarch64-darwin) | Host: mac16-10 |
-
-## Modules
-
-The repository is organized into four concern-based flake modules:
-
-| Module | Type | Content |
-|--------|------|---------|
-| [`darwin/`](../flake-modules/darwin) | System-level | git, colima, docker, macOS defaults, homebrew |
-| [`cli-tools/`](../flake-modules/cli-tools) | User-level CLI | bat, btop, delta, eza, fd, direnv, nix-direnv, tmux |
-| [`dev-sdks/`](../flake-modules/dev-sdks) | User-level SDKs | uv, apktool, payload-dumper-go, scrcpy |
-| [`desktop-apps/`](../flake-modules/desktop-apps) | User-level GUI | iina, moonlight-qt, wechat |
-
-## Systems
-
-- `aarch64-darwin` (primary)
-- `x86_64-darwin`
-- `aarch64-linux`
-- `x86_64-linux`
+| Component | Version/Source | Role |
+|-----------|---------------|------|
+| Nix | flakes + nix-command | Package management |
+| nixpkgs | nixpkgs-unstable | Package collection |
+| flake-parts | hercules-ci/flake-parts | Flake modularization |
+| nix-darwin | master | macOS system configuration |
+| home-manager | master | User environment |
+| sops-nix | Mic92/sops-nix | Secret management |
+| mcp-nixos | utensils/mcp-nixos | Nix MCP server |
+| devenv | devenv.sh | Dev environment |
+| alejandra | nixpkgs | Nix formatter |
+| nil | nixpkgs | Nix LSP |
 
 ## Quick Reference
 
 - **Entry Point:** [`flake.nix`](../flake.nix)
-- **System Module:** [`flake-modules/darwin/default.nix`](../flake-modules/darwin/default.nix)
-- **CLI Tools Module:** [`flake-modules/cli-tools/default.nix`](../flake-modules/cli-tools/default.nix)
-- **Dev SDKs Module:** [`flake-modules/dev-sdks/default.nix`](../flake-modules/dev-sdks/default.nix)
-- **Desktop Apps Module:** [`flake-modules/desktop-apps/default.nix`](../flake-modules/desktop-apps/default.nix)
-- **Host Config:** [`hosts/mac16-10.nix`](../hosts/mac16-10.nix)
-- **DevShell:** [`.envrc`](../.envrc) — `use flake` loads workspace tools via nix-direnv
-- **Architecture Pattern:** flake-parts modular composition with `importApply`
+- **Module Convention:** `localFlake: { lib, config, self, inputs, ... }: { ... }`
+- **Implementation:** `perSystem: { lib, config, pkgs, ... }: { ... }`
+- **External Packages:** `nixpkgs.overlays` pattern
+- **Secrets:** sops-nix Age encryption + LaunchAgent env injection
+- **Containers:** `services.colima` (declarative, launchd-managed)
+- **Reference Patterns:** [`references/`](../references/) — repomix digests
 
-## Documentation Index
+## Project Structure
 
-- [Architecture](./architecture.md)
-- [Source Tree Analysis](./source-tree-analysis.md)
-- [Development Guide](./development-guide.md)
-- [Deployment Guide](./deployment-guide.md)
-- [Project Context (AI)](../_bmad-output/project-context.md)
+```
+nix-config/
+├── flake.nix                    # Entry point
+├── devenv.nix                   # Dev environment (MCP servers)
+├── flake-modules/               # Concern-based modules
+│   ├── darwin/                  # macOS system config
+│   ├── cli-tools/               # CLI tools + containers
+│   ├── dev-sdks/                # Development SDKs
+│   └── desktop-apps/           # Desktop applications
+├── hosts/                       # Per-machine configs
+├── secrets/                     # Encrypted secrets
+├── docs/                        # Documentation
+├── reference/                   # Config fixtures
+├── references/                  # Pattern digests
+└── plans/                       # Architectural plans
+```
+
+## Getting Started
+
+```bash
+# Validate
+nix flake check
+nix build .#darwinConfigurations.mac16-10.system
+
+# Deploy (local)
+darwin-rebuild switch --flake .#mac16-10
+
+# Deploy (remote)
+darwin-rebuild switch --flake .#mac16-10 --target-host keith@mac16-10
+```
+
+## See Also
+
+- [Architecture](./architecture.md) — Module patterns, data flow, design principles
+- [Source Tree Analysis](./source-tree-analysis.md) — Full annotated tree
+- [Development Guide](./development-guide.md) — Daily workflow
+- [Project Context (AI)](../_bmad-output/project-context.md) — AI agent rules
 
 ---
 
-_Generated: 2026-05-13 | Scan Level: Quick_
+_Generated: 2026-06-06 | Scan Level: Deep_

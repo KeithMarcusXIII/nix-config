@@ -2,140 +2,93 @@
 
 ---
 
-## Infrastructure Requirements
+## Deployment Target
 
-- **Target OS:** macOS (nix-darwin)
-- **Nix:** Installed with flakes enabled
-- **SSH:** Key-based access from dev node to target (for remote deploy)
-- **Current Host:** `mac16-10` (aarch64-darwin)
+- **Host:** `mac16-10`
+- **Architecture:** aarch64-darwin
+- **Nix Store:** External APFS volume (software RAID, two 500 GB disks)
 
-## Deployment Architecture
+## Deployment Commands
 
-```
-Dev Node (local)                    Target Host (mac16-10)
-     │                                      │
-     ├─ nix flake check                     │
-     ├─ nix build .#darwinConfigurations     │
-     │  .mac16-10.system                     │
-     │                                      │
-     └─── darwin-rebuild switch ────────────►
-            --flake .#mac16-10               Applies system closure
-            --target-host keith@mac16-10     Updates /etc/nix-darwin
-                                             Activates new generation
-```
-
-## Deployment Pipeline
-
-### Step 1: Pre-Deploy Validation
+### Local Deploy
 
 ```bash
-# Fast syntax/structure check
-nix flake check
-
-# Full system closure build (THE critical gate)
-nix build .#darwinConfigurations.mac16-10.system
-```
-
-> **If `nix build` fails, the system closure is broken. Do not proceed to deploy.**
-
-### Step 2: Dry-Run Preview
-
-```bash
-# See what would change without applying
-darwin-rebuild switch --dry-run --flake .#mac16-10
-
-# For remote host:
-darwin-rebuild switch --dry-run --flake .#mac16-10 --target-host keith@mac16-10
-```
-
-### Step 3: Deploy
-
-```bash
-# Local deploy (running on target machine)
 darwin-rebuild switch --flake .#mac16-10
+```
 
-# Remote SSH deploy
+### Remote Deploy
+
+```bash
 darwin-rebuild switch --flake .#mac16-10 --target-host keith@mac16-10
 ```
 
-## Environment Configuration
+## Validation Pipeline
 
-### Flake Input Branches
+Run these before every deploy:
 
-| Input | Branch | Role |
-|-------|--------|------|
-| `nixpkgs` | `nixos-25.11` (stable) | System infrastructure |
-| `nixpkgs-unstable` | `nixpkgs-unstable` (rolling) | Bleeding-edge user packages (opt-in) |
-| `nix-darwin` | `nix-darwin-25.11` (stable) | macOS system module framework |
-| `home-manager` | `release-25.11` (stable) | User environment module framework |
-| `flake-parts` | default (main) | Module composition framework |
+```bash
+# 1. Flake structure + eval check
+nix flake check
 
-Stable frameworks + rolling packages = predictable module system with latest user tools.
+# 2. Build full system closure
+nix build .#darwinConfigurations.mac16-10.system
 
-### Host Configuration ([`hosts/mac16-10.nix`](../hosts/mac16-10.nix))
+# 3. Preview what will change
+darwin-rebuild switch --dry-run --flake .#mac16-10
+```
 
-| Setting | Value |
-|---------|-------|
-| `system.stateVersion` | 6 |
-| `system.primaryUser` | keith |
-| `users.users.keith.home` | /Users/keith |
+## Post-Deploy Verification
 
-### Nix Daemon Configuration ([`darwinModules/default.nix`](../flake-modules/darwin/darwinModules/default.nix))
+```bash
+# Verify colima is running
+launchctl list | grep colima
 
-| Setting | Value | Scope |
-|---------|-------|-------|
-| `nix.settings.build-users-group` | nixbld | Shared (universal) |
-| `nix.settings.experimental-features` | flakes nix-command | Shared (universal) |
-| `nix.settings.max-jobs` | auto | Shared (universal) |
-| `nix.settings.trusted-users` | root @admin | Host-specific in [`hosts/mac16-10.nix`](../hosts/mac16-10.nix) |
+# Verify docker works through colima
+docker info
 
-> **Pattern**: Universal `nix.settings` go in the shared darwin module. Host-specific overrides (like `trusted-users`) go in the host file. The nix module system merges them at build time.
+# Verify sops-nix secrets decrypted
+ls -la /run/secrets/
 
-### Home Manager ([`homeManagerModules/default.nix`](../flake-modules/darwin/homeManagerModules/default.nix))
+# Verify activate-system KeepAlive
+sudo launchctl list | grep activate-system
 
-| Package | Type |
-|---------|------|
-| `iina` | Media player |
-| `vscodium` | Code editor |
-
-### System Packages ([`darwinModules/default.nix`](../flake-modules/darwin/darwinModules/default.nix))
-
-| Package | Type |
-|---------|------|
-| `git` | Version control |
-| `ripgrep` | Search |
-| `wget` | Download |
-| `tree` | Directory listing |
-| `colima` | Container runtime |
-
-### Homebrew Casks
-
-| Cask | Type |
-|------|------|
-| `zen-browser` | Web browser |
+# Verify launchd env vars (for GUI apps)
+launchctl getenv DEEPSEEK_API_KEY
+launchctl getenv BWS_ACCESS_TOKEN
+```
 
 ## Rollback
 
 ```bash
+# Immediate rollback to previous generation
+darwin-rebuild switch --rollback
+
 # List available generations
 darwin-rebuild --list-generations
-
-# Rollback to previous generation
-darwin-rebuild --rollback
 ```
+
+## Bootstrap (Nuclear Option)
+
+If `darwin-rebuild` itself is unavailable (e.g., after reboot with external volume):
+
+```bash
+sudo nix run --extra-experimental-features 'nix-command flakes' \
+  nix-darwin/nix-darwin-25.11#darwin-rebuild -- switch --flake .#mac16-10
+```
+
+Note: The `activate-system` KeepAlive fix (see [`architecture.md`](./architecture.md)) should prevent this in normal operation.
 
 ## CI/CD
 
-No CI/CD pipeline is currently configured. Deployment is manual via `darwin-rebuild switch`.
+No CI/CD pipeline is configured. Deployment is manual via `darwin-rebuild switch`.
 
-## Validation Checklist
+## Infrastructure
 
-- [ ] `nix flake check` passes (syntax, eval, flake structure)
-- [ ] `nix build .#darwinConfigurations.mac16-10.system` succeeds (full closure builds)
-- [ ] `darwin-rebuild switch --dry-run` shows expected changes
-- [ ] `darwin-rebuild switch` completes without errors
-- [ ] System functions correctly post-deploy
+- **Nix daemon:** LaunchDaemon at `/Library/LaunchDaemons/org.nixos.nix-daemon.plist`
+- **External volume mount:** LaunchDaemon at `/Library/LaunchDaemons/org.nixos.darwin-store.plist` (externally created, not in nix closure)
+- **System activation:** LaunchDaemon at `/Library/LaunchDaemons/org.nixos.activate-system.plist` (nix-darwin managed, with KeepAlive override)
+- **Secret decryption:** sops-nix during `darwin-rebuild switch` activation phase
 
 ---
 
-_Generated: 2026-05-17 | Scan Level: Quick_
+_Generated: 2026-06-06 | Scan Level: Deep_
