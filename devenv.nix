@@ -20,6 +20,7 @@ in
       mcp-nixos
       secretspec
       bws
+      repomix
     ];
 
     # https://devenv.sh/languages/
@@ -100,6 +101,14 @@ in
           "firecrawl_scrape"
         ];
       };
+      
+      "repomix" = {
+        command = "pnpx";
+        args = [
+          "repomix"
+          "--mcp"
+        ];
+      };
 
       # ----- streamable-http: GitHub Copilot MCP ------------------------------------
       "github" = {
@@ -149,7 +158,7 @@ in
     };
 
     # Opt out of IDE targets you don't use (all default true)
-    # mcp.roo.enable = false;     # .roo/mcp.json
+    mcp.roo.enable = true;     # .roo/mcp.json
     # mcp.vscode.enable = false;  # .vscode/mcp.json
     # mcp.cursor.enable = false;  # .cursor/mcp.json
 
