@@ -92,6 +92,28 @@ in {
     };
   };
 
+  # oMLX LLM inference server — data on external volume via --base-path.
+  # Replaces Homebrew-managed service (start_service = false below).
+  launchd.user.agents.omlx = {
+    serviceConfig = {
+      ProgramArguments = [
+        "/opt/homebrew/bin/omlx" "serve"
+        "--base-path" "/Volumes/Macintosh Dock/Users/keith/.omlx"
+      ];
+      KeepAlive = true;
+      RunAtLoad = true;
+      WorkingDirectory = "/Volumes/Macintosh Dock/Users/keith/.omlx";
+      # Console output (startup banner, binding info) — separate from oMLX's
+      # application log at {base_path}/logs/server.log.  Uses ~/Library/Logs
+      # per macOS user launch agent conventions.
+      StandardOutPath = "/Users/keith/Library/Logs/omlx/launchd.log";
+      StandardErrorPath = "/Users/keith/Library/Logs/omlx/launchd.log";
+      EnvironmentVariables = {
+        PATH = "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/bin:/bin:/usr/sbin:/sbin";
+      };
+    };
+  };
+
   environment.systemPackages = with pkgs; [
     # Core CLI utilities
     ripgrep
@@ -155,7 +177,7 @@ in {
     brews = [
       {
         name = "omlx";
-        start_service = true;
+        start_service = false;
       }
       "sunshine"
     ];
@@ -200,5 +222,17 @@ in {
         ${builtins.concatStringsSep "\n        " (map makeLoginLine loginItems)}
       end tell
     ' 2>/dev/null || true
+  '';
+
+  # Ensure oMLX base directory exists on the external volume before the
+  # launchd agent starts. If the volume isn't mounted yet, the agent's
+  # KeepAlive will retry until it appears.
+  system.activationScripts.omlx-data.text = ''
+    omlxBase="/Volumes/Macintosh Dock/Users/keith/.omlx"
+    if [ -d "/Volumes/Macintosh Dock" ]; then
+      mkdir -p "$omlxBase"/{models,cache,logs}
+    fi
+    # macOS convention: user launch agent logs in ~/Library/Logs/<service>/
+    mkdir -p /Users/keith/Library/Logs/omlx
   '';
 }
