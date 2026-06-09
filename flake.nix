@@ -99,10 +99,6 @@
                   })
                   {
                     home-manager.users.keith = {
-                      # HM-level overlay (robust: works with or without useGlobalPkgs)
-                      nixpkgs.overlays = [(final: prev: {
-                        mcp-nixos = inputs.mcp-nixos.packages.${final.stdenv.hostPlatform.system}.default;
-                      })];
                       imports = [
                         self.homeManagerModules.darwin
                         self.homeManagerModules.cli-tools
