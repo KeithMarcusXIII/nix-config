@@ -224,15 +224,16 @@ in {
     ' 2>/dev/null || true
   '';
 
-  # Ensure oMLX base directory exists on the external volume before the
-  # launchd agent starts. If the volume isn't mounted yet, the agent's
-  # KeepAlive will retry until it appears.
-  system.activationScripts.omlx-data.text = ''
+  # Prepare directories for services that depend on the external volume.
+  # oMLX data lives on /Volumes/Macintosh Dock; the launchd agents for
+  # oMLX and Mac Mouse Fix retry via KeepAlive until the volume appears.
+  system.activationScripts.external-volume-services.text = ''
     omlxBase="/Volumes/Macintosh Dock/Users/keith/.omlx"
     if [ -d "/Volumes/Macintosh Dock" ]; then
       mkdir -p "$omlxBase"/{models,cache,logs}
     fi
     # macOS convention: user launch agent logs in ~/Library/Logs/<service>/
     mkdir -p /Users/keith/Library/Logs/omlx
+    mkdir -p /Users/keith/Library/Logs/mac-mouse-fix
   '';
 }
