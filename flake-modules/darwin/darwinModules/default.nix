@@ -195,6 +195,7 @@ in {
       "pearcleaner"
       "ungoogled-chromium"
       "folx"
+      "pocket-casts"
     ];
   };
 
