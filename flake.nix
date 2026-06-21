@@ -50,6 +50,7 @@
       in {
         imports = [
           ./flake-modules/mkHomeManagerOutputsMerge.nix
+          ./flake-modules/mkDarwinOutputsMerge.nix
           darwin-mod
           cli-tools-mod
           dev-sdks-mod
