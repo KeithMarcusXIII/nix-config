@@ -124,12 +124,18 @@ in
         ];
       };
 
+      "crawl4ai" = {
+        transportType = "sse";
+        url = "https://crawl4ai.home.keithmarcus.com/mcp/sse";
+      };
+
       # ----- streamable-http: GitHub Copilot MCP ------------------------------------
       "github" = {
-        url = "https://api.githubcopilot.com/mcp/";
+        url = "https://api.githubcopilot.com/mcp/readonly";
         # transportType auto-injected as "streamable-http" by the module for url servers
         headers = {
           Authorization = "Bearer ${githubToken}";
+          X-MCP-Readonly = "true";
         };
         alwaysAllow = [
           "get_file_contents"
@@ -138,41 +144,41 @@ in
         # Tier 1 read tools removed from disabledTools — enables
         # codebase/issue/PR/release browsing (13 tools, +11 net new).
         # 45 total tools across all MCP servers (target: ≤60).
-        disabledTools = [
-          "add_comment_to_pending_review"
-          "add_issue_comment"
-          "add_reply_to_pull_request_comment"
-          "assign_copilot_to_issue"
-          "create_branch"
-          "create_or_update_file"
-          "create_pull_request"
-          "create_pull_request_with_copilot"
-          "create_repository"
-          "delete_file"
-          "fork_repository"
-          "get_copilot_job_status"
-          "get_label"
-          "get_release_by_tag"
-          "get_team_members"
-          "get_teams"
-          "issue_write"
-          "list_issue_types"
-          "list_repository_collaborators"
-          "merge_pull_request"
-          "pull_request_review_write"
-          "push_files"
-          "request_copilot_review"
-          "run_secret_scanning"
-          "search_users"
-          "sub_issue_write"
-          "update_pull_request"
-          "update_pull_request_branch"
-        ];
+        # disabledTools = [
+        #   "add_comment_to_pending_review"
+        #   "add_issue_comment"
+        #   "add_reply_to_pull_request_comment"
+        #   "assign_copilot_to_issue"
+        #   "create_branch"
+        #   "create_or_update_file"
+        #   "create_pull_request"
+        #   "create_pull_request_with_copilot"
+        #   "create_repository"
+        #   "delete_file"
+        #   "fork_repository"
+        #   "get_copilot_job_status"
+        #   "get_label"
+        #   "get_release_by_tag"
+        #   "get_team_members"
+        #   "get_teams"
+        #   "issue_write"
+        #   "list_issue_types"
+        #   "list_repository_collaborators"
+        #   "merge_pull_request"
+        #   "pull_request_review_write"
+        #   "push_files"
+        #   "request_copilot_review"
+        #   "run_secret_scanning"
+        #   "search_users"
+        #   "sub_issue_write"
+        #   "update_pull_request"
+        #   "update_pull_request_branch"
+        # ];
       };
     };
 
     # Opt out of IDE targets you don't use (all default true)
-    mcp.roo.enable = true;     # .roo/mcp.json
+    mcp.roo.enable = false;     # .roo/mcp.json
     # mcp.vscode.enable = false;  # .vscode/mcp.json
     # mcp.cursor.enable = false;  # .cursor/mcp.json
 
