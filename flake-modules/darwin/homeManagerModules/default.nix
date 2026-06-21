@@ -37,6 +37,6 @@ perSystem: {
   # matching the Homebrew cask appdir.
   targets.darwin.copyApps = {
     enable = true;
-    directory = "/Volumes/Macintosh Dock/Applications/Home Manager Apps";
+    directory = "/Volumes/Macintosh Dock/Users/keith/Applications";
   };
 }

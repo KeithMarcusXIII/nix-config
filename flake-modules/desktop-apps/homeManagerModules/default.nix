@@ -14,6 +14,5 @@ perSystem: {
     iina # Modern media player
     moonlight-qt # NVIDIA GameStream / Sunshine client
     wechat # WeChat desktop client
-    tailscale-gui # Tailscale GUI client for macOS
   ];
 }

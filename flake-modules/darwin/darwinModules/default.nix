@@ -189,6 +189,7 @@ in {
       "raycast"
       "rectangle-pro"
       "stats"
+      "tailscale"
       "zen"
       "vscodium"
       "tabby"
