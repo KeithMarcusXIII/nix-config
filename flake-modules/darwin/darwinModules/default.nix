@@ -97,8 +97,10 @@ in {
   launchd.user.agents.omlx = {
     serviceConfig = {
       ProgramArguments = [
-        "/opt/homebrew/bin/omlx" "serve"
-        "--base-path" "/Volumes/Macintosh Dock/Users/keith/.omlx"
+        "/opt/homebrew/bin/omlx"
+        "serve"
+        "--base-path"
+        "/Volumes/Macintosh Dock/Users/keith/.omlx"
       ];
       KeepAlive = true;
       RunAtLoad = true;
@@ -125,7 +127,6 @@ in {
     # Nix tooling
     nil # Nix language server
     alejandra # Nix formatter
-
   ];
 
   system.defaults = {
@@ -197,6 +198,12 @@ in {
       "ungoogled-chromium"
       "folx"
       "pocket-casts"
+      "keka"
+      "orbstack"
+      {
+        name = "steam";
+        args = {appdir = "/System/Applications";};
+      }
     ];
   };
 

@@ -27,24 +27,24 @@ perSystem: {
   ];
 
   # ── Colima: container runtime as a user launchd service ──────────
-  services.colima = {
-    enable = true;
-    package = pkgs.colima;
+  # services.colima = {
+  #   enable = true;
+  #   package = pkgs.colima;
 
-    profiles.default = {
-      isActive = true;
-      isService = true;
-      setDockerHost = true;
-      settings = {
-        cpu = 4;
-        memory = 8;
-        disk = 60;
-        arch = "aarch64";
-        vmType = "vz";
-        rosetta = true;
-      };
-    };
-  };
+  #   profiles.default = {
+  #     isActive = true;
+  #     isService = true;
+  #     setDockerHost = true;
+  #     settings = {
+  #       cpu = 4;
+  #       memory = 8;
+  #       disk = 60;
+  #       arch = "aarch64";
+  #       vmType = "vz";
+  #       rosetta = true;
+  #     };
+  #   };
+  # };
 
   # ── Enable flags ──────────────────────────────────────────────────
   # Toggle these at a glance without digging into config details below
