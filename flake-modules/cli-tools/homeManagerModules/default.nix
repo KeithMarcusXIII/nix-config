@@ -12,7 +12,7 @@ perSystem: {
     eza # Modern ls replacement
     fd # Modern find replacement
     tmux # Terminal multiplexer
-    # pkgs-unstable.devbox #
+    # devbox #
     devenv #
     # secretspec
     sops # Secret editor for sops-nix
@@ -24,6 +24,8 @@ perSystem: {
 
     # MCP server for NixOS
     mcp-nixos
+
+    yubikey-manager
   ];
 
   # ── Colima: container runtime as a user launchd service ──────────

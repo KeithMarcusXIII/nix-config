@@ -179,8 +179,9 @@ in {
       {
         name = "omlx";
         start_service = false;
+        trusted = true;
       }
-      "sunshine"
+      # { name = "sunshine"; trusted = true; }
     ];
     casks = [
       "android-studio"
@@ -204,6 +205,7 @@ in {
         name = "steam";
         args = {appdir = "/System/Applications";};
       }
+      "proton-mail"
     ];
   };
 
