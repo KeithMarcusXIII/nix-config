@@ -6,26 +6,23 @@ perSystem: {
   ...
 }: {
   home.packages = with pkgs; [
-    bat # cat with syntax highlighting
-    btop # Process/resource monitor
-    delta # git diff viewer
-    eza # Modern ls replacement
-    fd # Modern find replacement
-    tmux # Terminal multiplexer
-    # devbox #
-    devenv #
+    bat
+    btop
+    delta
+    eza
+    fd 
+    tmux 
+    devenv
     # secretspec
-    sops # Secret editor for sops-nix
-
-    # Container tools (managed alongside colima service)
+    sops 
     docker
     docker-compose
     docker-buildx
-
-    # MCP server for NixOS
     mcp-nixos
-
     yubikey-manager
+    pnpm
+    exiftool
+    immich-go
   ];
 
   # ── Colima: container runtime as a user launchd service ──────────
@@ -54,7 +51,9 @@ perSystem: {
     direnv.enable = true;
     zsh.enable = true;
     git.enable = true;
-    mise.enable = true;
+    mise = {
+      enable = true;
+    };
   };
 
   # ── Program configurations ────────────────────────────────────────
@@ -84,12 +83,27 @@ perSystem: {
 
     mise = {
       enableZshIntegration = true;
-      # globalConfig kept empty — mise/config.toml written manually via xdg.configFile
-      # because the TOML serializer expands nested attrsets into [parent.child] headers
-      # which mise's parser doesn't support for [env.*] entries.
-      globalConfig = {};
+      # globalConfig left empty — written as raw text via xdg.configFile below
+      # because pkgs.formats.toml quotes dotted keys (spec-correct) but mise's
+      # config parser can't handle quoted TOML keys (e.g. "python.uv_venv_auto").
+      globalConfig = { };
     };
   };
+
+  # Hand-written mise config to avoid TOML serializer quoting dotted keys.
+  # Keys like python.uv_venv_auto and _.python.venv must remain unquoted
+  # because mise's parser doesn't handle quoted TOML keys.
+  xdg.configFile."mise/config.toml".text = ''
+    [env]
+    _.python.venv = {
+      path = ".venv", 
+      create = true,
+    }
+
+    [settings]
+    experimental = true
+    python.uv_venv_auto = "create|source"
+  '';
 
   launchd.agents.bws-env = {
     enable = true;

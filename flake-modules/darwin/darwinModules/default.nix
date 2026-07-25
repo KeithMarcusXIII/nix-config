@@ -137,7 +137,8 @@ in {
       # { app = "/System/Volumes/Preboot/Cryptexes/App/System/Applications/Safari.app"; }
       {app = "/Volumes/Macintosh Dock/Applications/Zen.app";}
       {app = "/System/Applications/Messages.app";}
-      {app = "/System/Applications/Mail.app";}
+      # {app = "/System/Applications/Mail.app";}
+      {app = "/Volumes/Macintosh Dock/Applications/Proton Mail.app";}
       {app = "/System/Applications/Maps.app";}
       {app = "/System/Applications/Photos.app";}
       {app = "/System/Applications/FaceTime.app";}
@@ -167,11 +168,13 @@ in {
       {
         name = "jundot/omlx";
         clone_target = "https://github.com/jundot/omlx";
+        trusted = true;
         force_auto_update = true;
       }
       {
         name = "lizardbyte/homebrew";
         clone_target = "https://github.com/LizardByte/homebrew-homebrew";
+        trusted = true;
         force_auto_update = true;
       }
     ];
@@ -191,7 +194,7 @@ in {
       "raycast"
       "rectangle-pro"
       "stats"
-      "tailscale"
+      "tailscale-app"
       "zen"
       "vscodium"
       "tabby"
@@ -201,11 +204,16 @@ in {
       "pocket-casts"
       "keka"
       "orbstack"
+      "antinote"
       {
         name = "steam";
         args = {appdir = "/System/Applications";};
       }
       "proton-mail"
+      {
+        name = "proton-drive";
+        args = {appdir = "/Applications";};
+      }
     ];
   };
 
@@ -246,5 +254,15 @@ in {
     # macOS convention: user launch agent logs in ~/Library/Logs/<service>/
     mkdir -p /Users/keith/Library/Logs/omlx
     mkdir -p /Users/keith/Library/Logs/mac-mouse-fix
+  '';
+
+  # Disable Epic Games Launcher auto-launch at login.
+  # The cask installs a LaunchAgent (RunAtLoad=true) that opens the launcher silently.
+  # launchctl disable persists across reboots (writes to overrides plist).
+  # launchctl bootout removes the service from the current session immediately.
+  # Re-enable later with: launchctl enable gui/$(id -u)/com.epicgames.launcher
+  system.activationScripts.disable-epic-games-autolaunch.text = ''
+    launchctl disable "gui/$(id -u)/com.epicgames.launcher" 2>/dev/null || true
+    launchctl bootout "gui/$(id -u)/com.epicgames.launcher" 2>/dev/null || true
   '';
 }

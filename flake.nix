@@ -2,7 +2,6 @@
   description = "nix-config — macOS system configuration via nix-darwin";
 
   inputs = {
-    # ── Stable frameworks (predictable module system) ─────────
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     nix-darwin.url = "github:nix-darwin/nix-darwin/master";
@@ -10,18 +9,16 @@
     home-manager.url = "github:nix-community/home-manager/master";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
-    # ── Rolling packages (bleeding-edge, standalone) ─────────
-    # nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-
-    # ── Tools (version-independent) ──────────────────────────
     bluebuild-cli.url = "github:blue-build/cli";
     bluebuild-cli.inputs.nixpkgs.follows = "nixpkgs";
 
-    # ── Secret management ──────────────────────────────────
     sops-nix.url = "github:Mic92/sops-nix";
     sops-nix.inputs.nixpkgs.follows = "nixpkgs";
 
     mcp-nixos.url = "github:utensils/mcp-nixos";
+
+    mise.url = "github:jdx/mise";
+    mise.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = inputs @ {
@@ -90,13 +87,17 @@
                   self.darwinModules.default
                   home-manager.darwinModules.home-manager
                   sops-nix.darwinModules.sops
-                  # Overlay: inject mcp-nixos into pkgs from flake input
+                  # Overlay: inject external flake packages into pkgs
                   # inputs is accessible from the outer outputs function scope
                   # final.stdenv.hostPlatform.system is nix-darwin's pkgs system — no recursion
+                  # mise overlay uses prev.callPackage — safe from infinite recursion
                   ({ config, lib, ... }: {
-                    nixpkgs.overlays = [(final: prev: {
-                      mcp-nixos = inputs.mcp-nixos.packages.${final.stdenv.hostPlatform.system}.default;
-                    })];
+                    nixpkgs.overlays = [
+                      (final: prev: {
+                        mcp-nixos = inputs.mcp-nixos.packages.${final.stdenv.hostPlatform.system}.default;
+                      })
+                      inputs.mise.overlay
+                    ];
                   })
                   {
                     home-manager.users.keith = {
