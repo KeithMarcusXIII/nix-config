@@ -23,6 +23,7 @@ perSystem: {
     pnpm
     exiftool
     immich-go
+    repomix
   ];
 
   # ── Colima: container runtime as a user launchd service ──────────
@@ -94,6 +95,9 @@ perSystem: {
   # Keys like python.uv_venv_auto and _.python.venv must remain unquoted
   # because mise's parser doesn't handle quoted TOML keys.
   xdg.configFile."mise/config.toml".text = ''
+    [tools]
+    "nix:uv" = "latest"
+
     [env]
     _.python.venv = {
       path = ".venv", 

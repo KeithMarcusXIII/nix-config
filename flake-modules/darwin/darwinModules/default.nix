@@ -214,6 +214,7 @@ in {
         name = "proton-drive";
         args = {appdir = "/Applications";};
       }
+      "betterdisplay"
     ];
   };
 
