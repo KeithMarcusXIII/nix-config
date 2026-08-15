@@ -96,7 +96,14 @@
                       (final: prev: {
                         mcp-nixos = inputs.mcp-nixos.packages.${final.stdenv.hostPlatform.system}.default;
                       })
-                      inputs.mise.overlay
+                      # Apply mise overlay then disable tests — upstream brew/cask
+                      # tests fail in nix sandbox (missing /opt/homebrew paths).
+                      # TODO: revert to `inputs.mise.overlay` once upstream fixes tests.
+                      (final: prev:
+                        let miseOverlayed = inputs.mise.overlay final prev;
+                        in {
+                          mise = miseOverlayed.mise.overrideAttrs { doCheck = false; };
+                        })
                     ];
                   })
                   {

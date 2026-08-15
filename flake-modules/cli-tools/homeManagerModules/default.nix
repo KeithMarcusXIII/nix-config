@@ -15,6 +15,7 @@ perSystem: {
     devenv
     # secretspec
     sops 
+    bws
     docker
     docker-compose
     docker-buildx
@@ -68,6 +69,29 @@ perSystem: {
       envExtra = ''
         # sops-nix age key — lets CLI `sops` find the decryption key
         export SOPS_AGE_KEY_FILE="$HOME/.config/sops/age/keys.txt"
+
+        # Auto-load known sops-nix secrets as environment variables.
+        # Add new secret names to the list below (one per line).
+        # Each maps to /run/secrets/<name> and exports as UPPERCASE_WITH_UNDERSCORES.
+        _sops_secrets=(
+          bws-access-token
+          omlx-api-key
+          github-token
+        )
+        for _secret_name in "''${_sops_secrets[@]}"; do
+          _secret_file="/run/secrets/$_secret_name"
+          [ -f "$_secret_file" ] || continue
+          _secret_key="$(echo "$_secret_name" | tr '[:lower:]-' '[:upper:]_')"
+          _secret_val="$(cat "$_secret_file" 2>/dev/null)"
+          [ -n "$_secret_val" ] && export "$_secret_key=$_secret_val"
+        done
+        unset _sops_secrets _secret_name _secret_file _secret_key _secret_val
+
+        # Workaround: secretspec's BWS provider hardcodes --server-url https://bitwarden.com
+        # (the web vault) instead of using the BWS CLI's correct defaults.
+        # This wrapper strips the flag so BWS hits api.bitwarden.com.
+        # See scripts/bws-secretspec.sh
+        export SECRETSPEC_BWS_CLI_PATH="$HOME/.config/nix/scripts/bws-secretspec.sh"
       '';
       initContent = ''
         eval "$(/opt/homebrew/bin/brew shellenv zsh)"
@@ -109,24 +133,4 @@ perSystem: {
     python.uv_venv_auto = "create|source"
   '';
 
-  launchd.agents.bws-env = {
-    enable = true;
-    config = {
-      Label = "com.bws-env";
-      ProgramArguments = [
-        "/bin/sh"
-        "-c"
-        ''
-          keyFile="/run/secrets/bws-access-token"
-          if [ -f "$keyFile" ]; then
-            launchctl setenv BWS_ACCESS_TOKEN "$(cat "$keyFile")"
-          else
-            echo "WARNING: $keyFile not found — bitwarden secrets manager will not have API key" >&2
-            logger -t bws-env "ERROR: $keyFile not found"
-          fi
-        ''
-      ];
-      RunAtLoad = true;
-    };
-  };
 }
